@@ -43,8 +43,6 @@ public:
 
 	typedef Token::TokenType TokenType;
 
-	//vector<Token> tokenList;
-
 	DynamicList<Token> tokenList;
 
 	void printTokensTo(ostream& out) const
