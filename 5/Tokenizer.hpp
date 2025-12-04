@@ -13,7 +13,13 @@ public:
 	class Token
 	{
 	public:
-		enum class TokenType { PLUS, MINUS, STAR, SLASH, LPAREN, RPAREN, NUM, IDENT, EQUAL, END, };
+		enum class TokenType { 
+			PLUS, MINUS, STAR, SLASH, 
+			LPAREN, RPAREN, LCURLY, RCURLY, 
+			NUM, IDENT, EQUAL, END,
+			SEMICOLON, COMMA,
+			IF, ENDIF,
+		};
 
 		TokenType type;
 		double value;
@@ -37,6 +43,11 @@ public:
 			case TokenType::IDENT: out << "IDENTIFIER(" << text << ")"; break;
 			case TokenType::EQUAL: out << "EQUAL"; break;
 			case TokenType::END: out << "END"; break;
+			case TokenType::IF: out << "IF"; break;
+			case TokenType::ENDIF: out << "ENDIF"; break;
+			case TokenType::LCURLY: out << "LBRACKET"; break;
+			case TokenType::RCURLY: out << "RBRACKET"; break;
+			case TokenType::SEMICOLON: out << "SEMICOLON"; break;
 			}
 		}
 	};
@@ -79,7 +90,9 @@ public:
 					textString += inputString[i];
 					i++;
 				}
-				tokenList.push(Token(TokenType::IDENT, 0, textString));
+				if		(textString.compare("if") == 0)	tokenList.push(Token(TokenType::IF, 0, textString));
+				else if (textString.compare("endif") == 0) tokenList.push(Token(TokenType::ENDIF));
+				else	tokenList.push(Token(TokenType::IDENT, 0, textString));
 			}
 			else
 			{
@@ -91,7 +104,11 @@ public:
 				case '/': tokenList.push(Token(TokenType::SLASH)); break;
 				case '(': tokenList.push(Token(TokenType::LPAREN)); break;
 				case ')': tokenList.push(Token(TokenType::RPAREN)); break;
+				case '{': tokenList.push(Token(TokenType::LCURLY)); break;
+				case '}': tokenList.push(Token(TokenType::RCURLY)); break;
 				case '=': tokenList.push(Token(TokenType::EQUAL)); break;
+				case ';': tokenList.push(Token(TokenType::SEMICOLON)); break;
+				case ',': tokenList.push(Token(TokenType::COMMA)); break;
 				}
 				i++;
 			}
@@ -101,15 +118,16 @@ public:
 		// For loop to handle implicit *
 		// puts star where multiplication is implied
 		// ex: 2(3-5) = 2*(3-5) and (2+5)(3-8) = (2+5)*(3-8) 
-		for (int i = 0; i < tokenList.size() - 1; i++)
-		{
-			if ((tokenList[i].type == TokenType::NUM && tokenList[i + 1].type == TokenType::LPAREN)
-				|| (tokenList[i].type == TokenType::RPAREN && tokenList[i + 1].type == TokenType::LPAREN))
-			{
-				//tokenList.insert(tokenList.begin() + (i + 1), Token(TokenType::STAR));
-				tokenList.insert(Token(TokenType::STAR), i + 1);
-				i++;
-			}
-		}
+
+		//for (int i = 0; i < tokenList.size() - 1; i++)
+		//{
+		//	if ((tokenList[i].type == TokenType::NUM && tokenList[i + 1].type == TokenType::LPAREN)
+		//		|| (tokenList[i].type == TokenType::RPAREN && tokenList[i + 1].type == TokenType::LPAREN))
+		//	{
+		//		//tokenList.insert(tokenList.begin() + (i + 1), Token(TokenType::STAR));
+		//		tokenList.insert(Token(TokenType::STAR), i + 1);
+		//		i++;
+		//	}
+		//}
 	}
 };

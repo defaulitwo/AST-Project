@@ -1,12 +1,7 @@
 // recursive descent parser
 // each grammar rule is turned into a recursive function
-// 
-//	Expression -> Term { (+|-) Term }
-//	Term       -> Factor{ (*|/) Factor }
-//	Factor     -> NUMBER | '-' Factor | '(' Expression ')'
-// 
 // each function returns a node of the abstract syntax tree
-// after parsing is done, the root node of the AST is returned
+// after parsing is done, the root node of the AST is returned, and the tree is fully constructed
 
 #pragma once
 //#include <vector> replaced by DynamicList.hpp
@@ -18,107 +13,133 @@ using namespace std;
 typedef Tokenizer::Token Token;
 typedef Tokenizer::Token::TokenType TokenType;
 typedef AST::Node Node;
-typedef AST::Node::NodeType NodeType;
+//typedef AST::Node::NodeType NodeType;
 
 class Parser
 {
 public:
-	//vector<Token> tokenList;
 	DynamicList<Token> tokenList;
-	int nextTokenIndex = 0;
+	int tokenIndex = 0;
 
 	AST resultTree;
 
 	Parser(const Tokenizer& inputTokenizer) : tokenList(inputTokenizer.tokenList)
 	{
-		resultTree.root = parseExpression();
+		resultTree.root = parseStatementList();
 	}
 
 private:
-	void scanToken()
+	void consumeToken()
 	{
-		if (nextTokenIndex < tokenList.size())
-			nextTokenIndex++;
+		if (tokenList[tokenIndex].type != TokenType::END) tokenIndex++;
 	}
 
-	AST::Node* parseExpression()
+	const Token& peek(int n = 0)
 	{
-		AST::Node* node = parseTerm();
-
-		while (tokenList[nextTokenIndex].type == TokenType::PLUS ||
-			tokenList[nextTokenIndex].type == TokenType::MINUS)
-		{
-			TokenType op = tokenList[nextTokenIndex].type;
-			scanToken(); // consume + or -
-
-			AST::Node* right = parseTerm();
-
-			if (op == TokenType::PLUS)
-				node = new AST::AddNode(node, right);
-			else
-				node = new AST::SubNode(node, right);
-		}
-
-		return node;
+		if (tokenIndex + n >= tokenList.size()) throw runtime_error("Invalid peek attempt");
+		return tokenList[tokenIndex + n];
 	}
 
-	AST::Node* parseTerm()
+	AST::StatementList* parseStatementList()
 	{
-		AST::Node* node = parseFactor();
-
-		// While the next token is * or /
-		while (tokenList[nextTokenIndex].type == TokenType::STAR ||
-			tokenList[nextTokenIndex].type == TokenType::SLASH)
-		{
-			TokenType op = tokenList[nextTokenIndex].type;
-			scanToken(); // consume the operator
-
-			AST::Node* right = parseFactor();
-
-			if (op == TokenType::STAR)
-				node = new AST::MulNode(node, right);
-			else
-				node = new AST::DivNode(node, right);
-		}
-
-		return node;
+		AST::StatementList* returnNode = new AST::StatementList();
+		while (peek().type != TokenType::END && peek().type != TokenType::RCURLY)
+			returnNode->statements.push(parseStatement());
+		return returnNode;
 	}
 
-	AST::Node* parseFactor()
+	AST::StatementNode* parseStatement()
 	{
-		if (tokenList[nextTokenIndex].type == TokenType::NUM)
+		//AST::StatementNode* returnNode;
+		switch (peek().type)
 		{
-			double value = tokenList[nextTokenIndex].value; // must store value before consuming token
-			scanToken();
-			return new AST::ValNode(value);
+		case TokenType::IDENT:
+			AST::AssignNode* node = new AST::AssignNode();
+			node->LValue = new AST::IdentifierNode(peek().text);
+			consumeToken();
+			if (peek().type != TokenType::EQUAL) throw runtime_error("Expected '=' after identifier");
+			consumeToken();
+			node->RValue = parseExpression();
+			if (peek().type != TokenType::SEMICOLON) throw runtime_error("Expected ';'");
+			consumeToken();
+			return node;
+			break;
+		//case TokenType::PRINT:
+			// todo
+		default:
+			throw runtime_error("Unexpected token in parseStatement()");
 		}
-		else if (tokenList[nextTokenIndex].type == TokenType::IDENT)
+	}
+
+	AST::ExpressionNode* parseExpression()
+	{
+		AST::ExpressionNode* returnNode = parseTerm();
+
+		while (peek().type == TokenType::PLUS || peek().type == TokenType::MINUS)
 		{
-			string text = tokenList[nextTokenIndex].text; // same thing here
-			scanToken();
-			return new AST::IdNode(text);
-		}
-		else if (tokenList[nextTokenIndex].type == TokenType::MINUS)
-		{
-			scanToken();
-			return new AST::NegNode(parseFactor());
-		}
-		else if (tokenList[nextTokenIndex].type == TokenType::LPAREN)
-		{
-			scanToken();
-			AST::Node* expression = parseExpression();
-			if (tokenList[nextTokenIndex].type == TokenType::RPAREN)
+			TokenType operation = peek().type;
+			consumeToken();
+			switch (operation)
 			{
-				scanToken();
-				return expression;
-			}
-			else
-			{
-				throw runtime_error("Expected ')' in parseFactor()");
+			case TokenType::PLUS:
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::ADD, returnNode, parseTerm()); 
+				break;
+			case TokenType::MINUS:
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::SUB, returnNode, parseTerm()); 
+				break;
 			}
 		}
-		else
+
+		return returnNode;
+	}
+
+	AST::ExpressionNode* parseTerm()
+	{
+		AST::ExpressionNode* returnNode = parseFactor();
+
+		while (peek().type == TokenType::STAR || peek().type == TokenType::SLASH)
 		{
+			TokenType operation = peek().type;
+			consumeToken();
+			switch (operation)
+			{
+			case TokenType::STAR:
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::MUL, returnNode, parseFactor()); break;
+			case TokenType::SLASH:
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::DIV, returnNode, parseFactor()); break;
+			}
+		}
+
+		return returnNode;
+	}
+
+	AST::ExpressionNode* parseFactor()
+	{
+		string identifier;
+		switch (peek().type)
+		{
+		case TokenType::NUM:
+			int value = peek().value;
+			consumeToken();
+			return new AST::IntegerLiteralNode(value);
+			break;
+		case TokenType::IDENT:
+			identifier = peek().text;
+			consumeToken();
+			return new AST::IdentifierNode(identifier);
+			break;
+		case TokenType::MINUS:
+			consumeToken();
+			return new AST::UnaryOpNode(AST::UnaryOpNode::Mode::NEG, parseFactor());
+			break;
+		case TokenType::LPAREN:
+			consumeToken();
+			AST::ExpressionNode* expression = parseExpression();
+			if (peek().type != TokenType::RPAREN) throw runtime_error("Expected ')'");
+			consumeToken();
+			return expression;
+			break;
+		default:
 			throw runtime_error("Unexpected token in parseFactor()");
 		}
 	}

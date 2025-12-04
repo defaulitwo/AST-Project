@@ -22,21 +22,21 @@ int main()
         cout << endl;
 
         // parsing the token list, building AST
-        try 
-        {
-            Parser parser(tokenizer);
-            cout << "Parser result tree:" << endl;
-            parser.resultTree.printExpressionTo(cout);
-            cout << endl;
+        //try 
+        //{
+        //    Parser parser(tokenizer);
+        //    cout << "Parser result tree:" << endl;
+        //    parser.resultTree.printExpressionTo(cout);
+        //    cout << endl;
 
-            // evaluating the output AST
-            cout << "Expression evaluation result = ";
-            cout << parser.resultTree.evaluate() << endl;
-            cout << endl;
-        }
-        catch (runtime_error error)
-        {
-            cout << "Error parsing: " << error.what() << endl;
-        }
+        //    // evaluating the output AST
+        //    cout << "Expression evaluation result = ";
+        //    cout << parser.resultTree.evaluate() << endl;
+        //    cout << endl;
+        //}
+        //catch (runtime_error error)
+        //{
+        //    cout << "Error parsing: " << error.what() << endl;
+        //}
     }
 }
