@@ -104,9 +104,11 @@ private:
 			switch (operation)
 			{
 			case TokenType::STAR:
-				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::MUL, returnNode, parseFactor()); break;
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::MUL, returnNode, parseFactor()); 
+				break;
 			case TokenType::SLASH:
-				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::DIV, returnNode, parseFactor()); break;
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::DIV, returnNode, parseFactor()); 
+				break;
 			}
 		}
 
