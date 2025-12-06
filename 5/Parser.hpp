@@ -9,8 +9,7 @@
 // after parsing is done, the root node of the AST is returned
 
 #pragma once
-//#include <vector> replaced by DynamicList.hpp
-#include "DynamicList.hpp"
+#include <vector>
 #include "Tokenizer.hpp"
 #include "AST.hpp"
 using namespace std;
@@ -18,107 +17,117 @@ using namespace std;
 typedef Tokenizer::Token Token;
 typedef Tokenizer::Token::TokenType TokenType;
 typedef AST::Node Node;
-typedef AST::Node::NodeType NodeType;
 
 class Parser
 {
 public:
-	//vector<Token> tokenList;
-	DynamicList<Token> tokenList;
-	int nextTokenIndex = 0;
+	vector<Token> tokenList;
+	int tokenIndex = 0;
 
 	AST resultTree;
+	
+	const Tokenizer& tokenizer;
 
-	Parser(const Tokenizer& inputTokenizer) : tokenList(inputTokenizer.tokenList)
+	Parser(const Tokenizer& inputTokenizer) : tokenList(inputTokenizer.tokenList), resultTree(inputTokenizer), tokenizer(inputTokenizer)
 	{
-		resultTree.root = parseExpression();
+		resultTree.root = parseStatementList();
 	}
 
 private:
-	void scanToken()
+	void consumeToken()
 	{
-		if (nextTokenIndex < tokenList.size())
-			nextTokenIndex++;
+		if (tokenIndex < tokenList.size()) tokenIndex++;
+	}
+
+	const Token& peek(int n = 0) { return tokenList[tokenIndex + n]; }
+
+	AST::StatementList* parseStatementList()
+	{
+		AST::StatementList * returnNode = new AST::StatementList;
+		while (peek().type != TokenType::END)
+		{
+			if (peek().type == TokenType::THEREFORE)
+			{
+				consumeToken();
+			}
+			returnNode->statements.push_back(parseConditional());
+			if (peek().type == TokenType::SEMICOLON) consumeToken();
+			else throw runtime_error("Syntax error, expected ';' after statement");
+		}
+		return returnNode;
+	}
+
+	AST::Node* parseConditional()
+	{
+		AST::Node* returnNode;
+		if (peek().type == TokenType::IF)
+		{
+			consumeToken();
+			returnNode = parseExpression();
+			if (peek().type == TokenType::THEN)
+			{
+				consumeToken();
+				returnNode = new AST::ConditionalNode(returnNode, parseExpression());
+			}
+			else throw runtime_error("Syntax error, if with no then");
+		}
+		else
+		{
+			returnNode = parseExpression();
+			if (peek().type == TokenType::ARROW)
+			{
+				consumeToken();
+				returnNode = new AST::ConditionalNode(returnNode, parseExpression());
+			}
+		}
+		return returnNode;
 	}
 
 	AST::Node* parseExpression()
 	{
-		AST::Node* node = parseTerm();
-
-		while (tokenList[nextTokenIndex].type == TokenType::PLUS ||
-			tokenList[nextTokenIndex].type == TokenType::MINUS)
+		Node* returnNode = parseTerm();
+		while (peek().type == TokenType::OR)
 		{
-			TokenType op = tokenList[nextTokenIndex].type;
-			scanToken(); // consume + or -
-
-			AST::Node* right = parseTerm();
-
-			if (op == TokenType::PLUS)
-				node = new AST::AddNode(node, right);
-			else
-				node = new AST::SubNode(node, right);
+			consumeToken();
+			returnNode = new AST::OrNode(returnNode, parseTerm());
 		}
-
-		return node;
+		return returnNode;
 	}
 
 	AST::Node* parseTerm()
 	{
-		AST::Node* node = parseFactor();
-
-		// While the next token is * or /
-		while (tokenList[nextTokenIndex].type == TokenType::STAR ||
-			tokenList[nextTokenIndex].type == TokenType::SLASH)
+		Node* returnNode = parseFactor();
+		while (peek().type == TokenType::AND)
 		{
-			TokenType op = tokenList[nextTokenIndex].type;
-			scanToken(); // consume the operator
-
-			AST::Node* right = parseFactor();
-
-			if (op == TokenType::STAR)
-				node = new AST::MulNode(node, right);
-			else
-				node = new AST::DivNode(node, right);
+			consumeToken();
+			returnNode = new AST::AndNode(returnNode, parseFactor());
 		}
-
-		return node;
+		return returnNode;
 	}
 
 	AST::Node* parseFactor()
 	{
-		if (tokenList[nextTokenIndex].type == TokenType::NUM)
+		string identifier;
+		Node* returnNode;
+		switch (peek().type)
 		{
-			double value = tokenList[nextTokenIndex].value; // must store value before consuming token
-			scanToken();
-			return new AST::ValNode(value);
-		}
-		else if (tokenList[nextTokenIndex].type == TokenType::IDENT)
-		{
-			string text = tokenList[nextTokenIndex].text; // same thing here
-			scanToken();
-			return new AST::IdNode(text);
-		}
-		else if (tokenList[nextTokenIndex].type == TokenType::MINUS)
-		{
-			scanToken();
-			return new AST::NegNode(parseFactor());
-		}
-		else if (tokenList[nextTokenIndex].type == TokenType::LPAREN)
-		{
-			scanToken();
-			AST::Node* expression = parseExpression();
-			if (tokenList[nextTokenIndex].type == TokenType::RPAREN)
+		case TokenType::VARIABLE:
+			identifier = peek().text;
+			consumeToken();
+			return new AST::VariableNode(tokenizer.getVariableIndex(identifier));
+		case TokenType::LPAREN:
+			consumeToken();
+			returnNode = parseExpression();
+			if (peek().type == TokenType::RPAREN)
 			{
-				scanToken();
-				return expression;
+				consumeToken();
+				return returnNode;
 			}
-			else
-			{
-				throw runtime_error("Expected ')' in parseFactor()");
-			}
-		}
-		else
-		{
+			else throw runtime_error("Expected ')'");
+		case TokenType::NOT:
+			consumeToken();
+			return new AST::NotNode(parseFactor());
+		default:
 			throw runtime_error("Unexpected token in parseFactor()");
 		}
 	}

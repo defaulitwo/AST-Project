@@ -7,6 +7,8 @@
 #pragma once
 #include <string>
 #include <ostream>
+#include <vector>
+#include "Tokenizer.hpp"
 using namespace std;
 
 class AST
@@ -15,105 +17,186 @@ public:
 	class Node
 	{
 	public:
-		enum class NodeType { VAL, ID, ADD, SUB, MUL, DIV, NEG, ASSIGN, };
-		
-		NodeType type;
-		Node(NodeType t) : type(t) { }
+		Node() = default;
 		virtual ~Node() = default;
-		virtual double evaluate() const = 0;
-		virtual void print(ostream& out) const = 0;
+		virtual bool evaluate(AST& tree, int i) const = 0;
+		virtual void print(AST& tree, ostream& out) const = 0;
 	};
 
-	Node* root = nullptr;
-
-	class ValNode : public Node
+	class StatementList : public Node
 	{
 	public:
-		double value;
-		ValNode(double v = 0) : Node(NodeType::VAL), value(v) { }
-		double evaluate() const override { return value; }
-		void print(ostream& out) const override { out << value; }
+		vector<Node*> statements;
+		StatementList() { }
+		~StatementList() { for (Node* statement : statements) delete statement; }
+		virtual bool evaluate(AST& tree, int i) const
+		{
+			return false;
+			for (Node* statement : statements)
+			{
+				// TODO
+			}
+		};
+		virtual void print(AST& tree, ostream& out) const
+		{ 
+			out << "Statement List\n|" << endl;
+			for (int i = 0; i < statements.size(); i++)
+			{
+				out << "|_ ";
+				if (i == statements.size() - 1) out << "therefore ";
+				statements[i]->print(tree, out);
+				out << endl << "|" << endl;
+			}
+		};
 	};
 
-	class IdNode : public Node
-	{
-	public:
-		string name;
-		IdNode(const string& s) : Node(NodeType::ID), name(s) { }
-		double evaluate() const override { /* code to look up the variable's value if known */ return 0 /* placeholder!! */; }
-		void print(ostream& out) const override { out << name; }
-	};
-
-	class AddNode : public Node
-	{
-	public:
-		Node* left;
-		Node* right;
-		AddNode(Node* l = nullptr, Node* r = nullptr) : Node(NodeType::ADD), left(l), right(r) { }
-		double evaluate() const override { return left->evaluate() + right->evaluate(); }
-		void print(ostream& out) const override { out << '('; left->print(out); out << '+'; right->print(out); out << ")"; }
-	};
-
-	class SubNode : public Node
+	class BinaryNode : public Node
 	{
 	public:
 		Node* left;
 		Node* right;
-		SubNode(Node* l = nullptr, Node* r = nullptr) : Node(NodeType::SUB), left(l), right(r) { }
-		double evaluate() const override { return left->evaluate() - right->evaluate(); }
-		void print(ostream& out) const override { out << '('; left->print(out); out << '-'; right->print(out); out << ")"; }
+		BinaryNode(Node* l = nullptr, Node* r = nullptr) : left(l), right(r) { }
+		virtual bool evaluate(AST& tree, int i) const = 0;
+		virtual void print(AST& tree, ostream& out) const = 0;
+		~BinaryNode() { delete left; delete right; }
 	};
 
-	class MulNode : public Node
+	class ConditionalNode : public BinaryNode
 	{
 	public:
-		Node* left;
-		Node* right;
-		MulNode(Node* l = nullptr, Node* r = nullptr) : Node(NodeType::MUL), left(l), right(r) { }
-		double evaluate() const override { return left->evaluate() * right->evaluate(); }
-		void print(ostream& out) const override { out << '('; left->print(out); out << '*'; right->print(out); out << ")"; }
-	};
-	
-	class DivNode : public Node
-	{
-	public:
-		Node* left;
-		Node* right;
-		DivNode(Node* l = nullptr, Node* r = nullptr) : Node(NodeType::DIV), left(l), right(r) { }
-		double evaluate() const override { return left->evaluate() / right->evaluate(); }
-		void print(ostream& out) const override { out << '('; left->print(out); out << '/'; right->print(out); out << ")"; }
+		ConditionalNode(Node* l = nullptr, Node* r = nullptr) : BinaryNode(l, r) { }
+		virtual bool evaluate(AST& tree, int i) const override
+		{ 
+			return !(left->evaluate(tree, i)) || (right->evaluate(tree, i)); 
+		}
+		void print(AST& tree, ostream& out) const override
+		{ 
+			left->print(tree, out);
+			out << " -> ";
+			right->print(tree, out);
+		}
 	};
 
-	class NegNode : public Node
+	class AndNode : public BinaryNode
+	{
+	public:
+		AndNode(Node* l = nullptr, Node* r = nullptr) : BinaryNode(l, r) { }
+		virtual bool evaluate(AST& tree, int i) const override
+		{ 
+			return (left->evaluate(tree, i)) && (right->evaluate(tree, i)); 
+		}
+		void print(AST& tree, ostream& out) const override
+		{
+			out << "( ";
+			left->print(tree, out);
+			out << " AND ";
+			right->print(tree, out);
+			out << " )";
+		}
+	};
+
+	class OrNode : public BinaryNode
+	{
+	public:
+		OrNode(Node* l = nullptr, Node* r = nullptr) : BinaryNode(l, r) { }
+		virtual bool evaluate(AST& tree, int i) const override { return left->evaluate(tree, i) || right->evaluate(tree, i); }
+		void print(AST& tree, ostream& out) const override
+		{
+			out << "( ";
+			left->print(tree, out);
+			out << " OR ";
+			right->print(tree, out);
+			out << " )";
+		}
+	};
+
+	class NotNode : public Node
 	{
 	public:
 		Node* operand;
-		NegNode(Node* o = nullptr) : Node(NodeType::NEG), operand(o) { }
-		double evaluate() const override { return - operand->evaluate(); }
-		void print(ostream& out) const override { out << '-'; operand->print(out); }
+		NotNode(Node* o = nullptr) : operand(o) { }
+		~NotNode() { delete operand; }
+		virtual bool evaluate(AST& tree, int i) const override { return !(operand->evaluate(tree, i)); }
+		void print(AST& tree, ostream& out) const override
+		{
+			out << "NOT( ";
+			operand->print(tree, out);
+			out << " )";
+		}
 	};
 
-	class AssignNode : public Node
+	class VariableNode : public Node
 	{
 	public:
-		IdNode* assignee;
-		Node* right;
-		AssignNode(IdNode* a = nullptr, Node* r = nullptr) : Node(NodeType::ASSIGN), assignee(a), right(r) { }
-		double evaluate() const override { }
-		void print(ostream& out) const override { }
+		int varIndex;
+		VariableNode(int v) : varIndex(v) { }
+		virtual bool evaluate(AST& tree, int i) const override { return tree.truthTable[i][varIndex]; }
+		void print(AST& tree, ostream& out) const override { out << tree.variableList[varIndex]; }
 	};
 
-	void printExpressionTo(ostream& out) const
+	StatementList* root;
+	const Tokenizer& tokenizer;
+	vector<string> variableList;
+	bool** truthTable;
+	bool** premiseAndConclusionTable;
+	vector<int> criticalRows;
+
+	AST(const Tokenizer& tokenizer) : root(nullptr), truthTable(nullptr), premiseAndConclusionTable(nullptr), tokenizer(tokenizer)
 	{
-		if (root)
-			root->print(out);
-		out << endl;
+		truthTable = tokenizer.truthTable;
+		variableList = tokenizer.variableList;
 	}
 
-	double evaluate() const
+	void buildPremiseAndConclusionTable()
+	{
+		premiseAndConclusionTable = new bool* [pow(2, variableList.size())];
+		
+		for (int i = 0; i < pow(2, variableList.size()); i++)
+		{
+			premiseAndConclusionTable[i] = new bool[root->statements.size()];
+		}
+
+		for (int i = 0; i < pow(2, variableList.size()); i++)
+		{
+			for (int j = 0; j < root->statements.size(); j++)
+				premiseAndConclusionTable[i][j] = root->statements[j]->evaluate(*this, i);
+		}
+	}
+
+	bool isSatisfiable() const
+	{
+		bool satisfiable;
+		for (int i = 0; i < pow(2, variableList.size()); i++)
+		{
+			satisfiable = true;
+			for (int j = 0; j < root->statements.size(); j++)
+			{
+				if (premiseAndConclusionTable[i][j] == false) satisfiable = false;
+			}
+			if (satisfiable) return true;
+		}
+		return false;
+	}
+
+	bool isValid() const
+	{
+		for (int i = 0; i < pow(2, variableList.size()); i++)
+		{
+			bool criticalRow = true;
+			for (int j = 0; j < root->statements.size() - 1; j++)
+			{
+				if (premiseAndConclusionTable[i][j] == false) criticalRow = false;
+			}
+			if (criticalRow && premiseAndConclusionTable[i][root->statements.size() - 1] == false)
+				return false;
+		}
+		return true;
+	}
+
+	void printExpressionTo(ostream& out)
 	{
 		if (root)
-			return root->evaluate();
-		else return 0;
+			root->print(*this, out);
+		out << endl;
 	}
 };

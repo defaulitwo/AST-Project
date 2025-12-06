@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
-//#include <vector>
-#include "DynamicList.hpp"
+#include <vector>
 #include <cctype>
 
 using namespace std;
@@ -13,29 +12,30 @@ public:
 	class Token
 	{
 	public:
-		enum class TokenType { PLUS, MINUS, STAR, SLASH, LPAREN, RPAREN, NUM, IDENT, EQUAL, END, };
+		enum class TokenType { AND, OR, NOT, ARROW, LPAREN, RPAREN, VARIABLE, SEMICOLON, IF, THEN, THEREFORE, END };
 
 		TokenType type;
-		double value;
 		string text;
 
 		Token() { }; // default constructor, allows creating an uninitialized array of Token
 
-		Token(TokenType t, double v = 0, const string& s = "") : type(t), value(v), text(s) { }
+		Token(TokenType t, const string& s = "") : type(t), text(s) { }
 		
 		void print(ostream& out) const
 		{
 			switch (type)
 			{
-			case TokenType::PLUS: out << "PLUS"; break;
-			case TokenType::MINUS: out << "MINUS"; break;
-			case TokenType::STAR: out << "STAR"; break;
-			case TokenType::SLASH: out << "SLASH"; break;
+			case TokenType::AND: out << "AND"; break;
+			case TokenType::OR: out << "OR"; break;
+			case TokenType::NOT: out << "NOT"; break;
+			case TokenType::ARROW: out << "ARROW"; break;
 			case TokenType::LPAREN: out << "LPAREN"; break;
 			case TokenType::RPAREN: out << "RPAREN"; break;
-			case TokenType::NUM: out << "NUMBER(" << value << ")"; break;
-			case TokenType::IDENT: out << "IDENTIFIER(" << text << ")"; break;
-			case TokenType::EQUAL: out << "EQUAL"; break;
+			case TokenType::VARIABLE: out << "VARIABLE(" + text + ")"; break;
+			case TokenType::SEMICOLON: out << "SEMICOLON"; break;
+			case TokenType::IF: out << "IF"; break;
+			case TokenType::THEN: out << "THEN"; break;
+			case TokenType::THEREFORE: out << "THEREFORE"; break;
 			case TokenType::END: out << "END"; break;
 			}
 		}
@@ -43,9 +43,9 @@ public:
 
 	typedef Token::TokenType TokenType;
 
-	//vector<Token> tokenList;
-
-	DynamicList<Token> tokenList;
+	vector<Token> tokenList;
+	vector<string> variableList;
+	bool** truthTable;
 
 	void printTokensTo(ostream& out) const
 	{
@@ -54,7 +54,7 @@ public:
 			token.print(out);
 			out << " ";
 		}
-		cout << endl;
+		out << endl;
 	}
 
 	Tokenizer(const string& inputString) 
@@ -63,17 +63,7 @@ public:
 		while (i < inputString.size())
 		{
 			if (isspace(inputString[i])) { i++; continue; }
-			if (isdigit(inputString[i]))
-			{
-				string numString;
-				while (isdigit(inputString[i]) || inputString[i] == '.')
-				{
-					numString += inputString[i];
-					i++;
-				}
-				tokenList.push(Token(TokenType::NUM, stod(numString)));
-			}
-			else if (isalpha(inputString[i])) // this if statement body is to be re-done if expanded to a full compiler
+			if (isalpha(inputString[i]))
 			{
 				string textString;
 				while (isalpha(inputString[i]))
@@ -81,37 +71,73 @@ public:
 					textString += inputString[i];
 					i++;
 				}
-				tokenList.push(Token(TokenType::IDENT, 0, textString));
+				if (textString.compare("and") == 0) tokenList.push_back(Token(TokenType::AND));
+				else if (textString.compare("or") == 0) tokenList.push_back(Token(TokenType::OR));
+				else if (textString.compare("not") == 0) tokenList.push_back(Token(TokenType::NOT));
+				else if (textString.compare("if") == 0) tokenList.push_back(Token(TokenType::IF));
+				else if (textString.compare("then") == 0) tokenList.push_back(Token(TokenType::THEN));
+				else if (textString.compare("therefore") == 0) tokenList.push_back(Token(TokenType::THEREFORE));
+				else
+				{
+					tokenList.push_back(Token(TokenType::VARIABLE, textString));
+					bool isUnique = true;
+					for (string s : variableList)
+					{
+						if (s.compare(textString) == 0) isUnique = false;
+					}
+					if (isUnique) variableList.push_back(textString);
+				}
 			}
 			else
 			{
 				switch (inputString[i])
 				{
-				case '+': tokenList.push(Token(TokenType::PLUS)); break;
-				case '-': tokenList.push(Token(TokenType::MINUS)); break;
-				case '*': tokenList.push(Token(TokenType::STAR)); break;
-				case '/': tokenList.push(Token(TokenType::SLASH)); break;
-				case '(': tokenList.push(Token(TokenType::LPAREN)); break;
-				case ')': tokenList.push(Token(TokenType::RPAREN)); break;
-				case '=': tokenList.push(Token(TokenType::EQUAL)); break;
+				case '^': tokenList.push_back(Token(TokenType::AND)); break;
+				case 'v': tokenList.push_back(Token(TokenType::OR)); break;
+				case '~': tokenList.push_back(Token(TokenType::NOT)); break;
+				case '(': tokenList.push_back(Token(TokenType::LPAREN)); break;
+				case ')': tokenList.push_back(Token(TokenType::RPAREN)); break;
+				case ';': tokenList.push_back(Token(TokenType::SEMICOLON)); break;
+				case '-': 
+					if (inputString[i + 1] == '>')
+					{
+						tokenList.push_back(Token(TokenType::ARROW));
+						i++;
+					}
+					break;
 				}
 				i++;
 			}
 		}
-		tokenList.push(Token(TokenType::END));
+		tokenList.push_back(Token(TokenType::END));
 
-		// For loop to handle implicit *
-		// puts star where multiplication is implied
-		// ex: 2(3-5) = 2*(3-5) and (2+5)(3-8) = (2+5)*(3-8) 
-		for (int i = 0; i < tokenList.size() - 1; i++)
+		truthTable = new bool* [pow(2, variableList.size())];
+		
+		for (int i = 0; i < pow(2, variableList.size()); i++)
+			truthTable[i] = new bool[variableList.size()];
+
+		for (int i = 0; i < pow(2, variableList.size()); i++)
 		{
-			if ((tokenList[i].type == TokenType::NUM && tokenList[i + 1].type == TokenType::LPAREN)
-				|| (tokenList[i].type == TokenType::RPAREN && tokenList[i + 1].type == TokenType::LPAREN))
-			{
-				//tokenList.insert(tokenList.begin() + (i + 1), Token(TokenType::STAR));
-				tokenList.insert(Token(TokenType::STAR), i + 1);
-				i++;
-			}
+			for (int j = 0; j < variableList.size(); j++)
+				truthTable[i][j] = (bool)(i >> j & 1);
 		}
+	}
+
+	~Tokenizer()
+	{
+		for (int i = 0; i < pow(2, variableList.size()); i++) // dealloacte truth table
+		{
+			delete[] truthTable[i];
+		}
+		delete[] truthTable;
+	}
+
+	int getVariableIndex(string s) const
+	{
+		for (int i = 0; i < variableList.size(); i++)
+		{
+			if (variableList[i].compare(s) == 0) return i;
+		}
+		return -1;
 	}
 };
