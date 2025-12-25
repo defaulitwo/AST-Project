@@ -123,6 +123,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ExecutionResult.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="AST.cpp" />
     <ClCompile Include="DynamicList.cpp" />
@@ -131,6 +132,7 @@
     <ClInclude Include="AST.hpp" />
     <ClInclude Include="CodeGenerator.hpp" />
     <ClInclude Include="DynamicList.hpp" />
+    <ClInclude Include="ExecutionResult.hpp" />
     <ClInclude Include="Parser.hpp" />
     <ClInclude Include="Tokenizer.hpp" />
   </ItemGroup>
