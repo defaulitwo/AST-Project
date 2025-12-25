@@ -15,6 +15,7 @@ public:
 	public:
 		enum class Type { 
 			PRINT,
+			VAR,
 			ASSIGN,
 			GREATER, LESS,
 			AND, OR, NOT,
@@ -31,12 +32,12 @@ public:
 		};
 
 		Type type;
-		double value;
+		int value;
 		string text;
 
 		Token() { }; // default constructor, allows creating an uninitialized array of Token
 
-		Token(Type t, double v = 0, const string& s = "") : type(t), value(v), text(s) { }
+		Token(Type t, int v = 0, const string& s = "") : type(t), value(v), text(s) { }
 		
 		void print(ostream& out) const
 		{
@@ -99,6 +100,7 @@ public:
 					i++;
 				}
 				if (textString.compare("print") == 0)		tokenList.push(Token(Token::Type::PRINT));
+				else if (textString.compare("var") == 0)	tokenList.push(Token(Token::Type::VAR));
 				else if (textString.compare("if") == 0)		tokenList.push(Token(Token::Type::IF, 0, textString));
 				else if (textString.compare("else") == 0)	tokenList.push(Token(Token::Type::ELSE, 0, textString));
 				else if (textString.compare("while") == 0)	tokenList.push(Token(Token::Type::WHILE, 0, textString));
@@ -131,20 +133,5 @@ public:
 			}
 		}
 		tokenList.push(Token(Token::Type::END));
-
-		// For loop to handle implicit *
-		// puts star where multiplication is implied
-		// ex: 2(3-5) = 2*(3-5) and (2+5)(3-8) = (2+5)*(3-8) 
-
-		//for (int i = 0; i < tokenList.size() - 1; i++)
-		//{
-		//	if ((tokenList[i].type == TokenType::NUM && tokenList[i + 1].type == TokenType::LPAREN)
-		//		|| (tokenList[i].type == TokenType::RPAREN && tokenList[i + 1].type == TokenType::LPAREN))
-		//	{
-		//		//tokenList.insert(tokenList.begin() + (i + 1), Token(TokenType::STAR));
-		//		tokenList.insert(Token(TokenType::STAR), i + 1);
-		//		i++;
-		//	}
-		//}
 	}
 };

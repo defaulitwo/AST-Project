@@ -3,15 +3,12 @@ class ExecutionResult
 {
 public:
 	enum class Type {
-		Normal, Return, Break, Continue
+		Normal, Null, Return, Break, Continue, VariableDeclaration
 	};
 
 	int value;
 
 	Type type;
-	ExecutionResult(Type t = Type::Normal, int v = 0) : type(t), value(v)
-	{
-
-	}
+	ExecutionResult(Type t = Type::Normal, int v = 0) : type(t), value(v) { }
 };
 

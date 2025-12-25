@@ -27,6 +27,9 @@
     <ClCompile Include="ExecutionResult.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Scope.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AST.hpp">
@@ -45,6 +48,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ExecutionResult.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Scope.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

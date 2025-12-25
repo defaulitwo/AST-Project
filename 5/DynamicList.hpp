@@ -37,6 +37,11 @@ public:
 		delete[] array_;
 	}
 
+	bool empty()
+	{
+		return size_ == 0;
+	}
+
 	int size() const
 	{
 		return size_;
@@ -73,7 +78,7 @@ public:
 
 	T pop()
 	{
-		if (size_ == 0) return;
+		if (size_ == 0) return T();
 		return array_[--size_];
 	}
 

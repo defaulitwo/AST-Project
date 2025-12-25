@@ -62,6 +62,9 @@ private:
 		AST::StatementNode* returnNode;
 		switch (peek().type)
 		{
+		case Token::Type::VAR: // variable declaration
+			returnNode = parseVariableDeclaration();
+			break;
 		case Token::Type::LCURLY: // statement block {...}
 			returnNode = parseBlock();
 			break;
@@ -79,6 +82,25 @@ private:
 			break;
 		default: // expression statement ex: x = 10+3;
 			returnNode = new AST::ExpressionStatementNode(parseExpression());
+			expect(Token::Type::SEMICOLON);
+		}
+		return returnNode;
+	}
+
+	AST::VariableDeclarationNode* parseVariableDeclaration()
+	{
+		AST::VariableDeclarationNode* returnNode;
+		expect(Token::Type::VAR);
+		Token identifierToken = expect(Token::Type::IDENT);
+		returnNode = new AST::VariableDeclarationNode(identifierToken.text);
+		if (peek().type == Token::Type::EQUAL)
+		{
+			expect(Token::Type::EQUAL);
+			returnNode->initializerExpression = parseExpression();
+			expect(Token::Type::SEMICOLON);
+		}
+		else
+		{
 			expect(Token::Type::SEMICOLON);
 		}
 		return returnNode;
@@ -175,7 +197,7 @@ private:
 	{
 		if (peek().type == Token::Type::IDENT && peek(1).type == Token::Type::EQUAL)
 		{
-			Token identifierToken = eat();
+			Token identifierToken = expect(Token::Type::IDENT);
 			expect(Token::Type::EQUAL); // consume '='
 			AST::ExpressionNode* returnNode = new AST::BinaryOpNode(
 				AST::BinaryOpNode::Mode::ASS, 

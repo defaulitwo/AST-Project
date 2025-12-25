@@ -127,6 +127,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="AST.cpp" />
     <ClCompile Include="DynamicList.cpp" />
+    <ClCompile Include="Scope.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AST.hpp" />
@@ -134,6 +135,7 @@
     <ClInclude Include="DynamicList.hpp" />
     <ClInclude Include="ExecutionResult.hpp" />
     <ClInclude Include="Parser.hpp" />
+    <ClInclude Include="Scope.hpp" />
     <ClInclude Include="Tokenizer.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

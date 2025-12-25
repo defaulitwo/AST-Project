@@ -13,13 +13,13 @@ int main()
         cout << "> ";
         getline(cin, input);
         if (input.compare("exit") == 0 || input.compare("quit") == 0) exit(0);
-        cout << endl;
+        //cout << endl;
 
         // tokenizing the input string, generating the token list
         Tokenizer tokenizer(input);
-        cout << "Tokenization result:" << endl;
-        tokenizer.printTokensTo(cout);
-        cout << endl;
+        //cout << "Tokenization result:" << endl;
+        //tokenizer.printTokensTo(cout);
+        //cout << endl;
 
         // parsing the token list, building AST
         try 

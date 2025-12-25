@@ -10,6 +10,7 @@
 #include <ostream>
 #include "DynamicList.hpp";
 #include "ExecutionResult.hpp";
+#include "Scope.hpp";
 using namespace std;
 
 class AST
@@ -21,7 +22,7 @@ public:
 	public:
 		Node() = default;
 		virtual ~Node() = default;
-		virtual ExecutionResult execute() const = 0;
+		virtual ExecutionResult execute(Scope& scope)  = 0;
 	};
 
 	class StatementNode : public Node
@@ -29,7 +30,7 @@ public:
 	public:
 		StatementNode() = default;
 		virtual ~StatementNode() = default;
-		virtual ExecutionResult execute() const = 0;
+		virtual ExecutionResult execute(Scope& scope) = 0;
 	};
 
 	class ExpressionNode : public Node
@@ -37,7 +38,7 @@ public:
 	public:
 		ExpressionNode() = default;
 		virtual ~ExpressionNode() = default;
-		virtual ExecutionResult execute() const = 0;
+		virtual ExecutionResult execute(Scope& scope) = 0;
 	};
 
 	class StatementList : public StatementNode
@@ -45,47 +46,46 @@ public:
 	public:
 
 		DynamicList<StatementNode*> statements;
+		int variableCount;
 
-		StatementList() { }
+		StatementList() : variableCount(0) { }
 		virtual ~StatementList() { for (Node* n : statements) delete n; }
-		virtual ExecutionResult execute() const override
+		virtual ExecutionResult execute(Scope& scope) override
 		{
 			ExecutionResult execution;
 			for (StatementNode* statement : statements)
 			{
-				execution = statement->execute();
+				execution = statement->execute(scope);
 				if (execution.type == ExecutionResult::Type::Break) { return ExecutionResult(execution.type); }
+				if (execution.type == ExecutionResult::Type::VariableDeclaration) { variableCount++; }
 			}
+			scope.pop(variableCount);
+			variableCount = 0; // reset variableCount for later calls
 			return execution;
 		}
 	};
 
 	StatementNode* root;
 
-
-	AST() : root(nullptr)
-	{
-
-	}
+	AST() : root(nullptr) { }
 
 	class IdentifierNode : public ExpressionNode
 	{
 	public:
 		string identifier;
-		int value;
-		IdentifierNode(const string& name) : identifier(name), value(0) { }
+		IdentifierNode(const string& name) : identifier(name) { }
 		~IdentifierNode() { }
-		int getValue() const
+		int getValue(Scope& scope) const
 		{
-			return value;
+			return scope.getValue(identifier);
 		}
-		void setValue(int v)
+		void setValue(Scope& scope, int v)
 		{
-			value = v;
+			scope.setValue(identifier, v);
 		}
-		virtual ExecutionResult execute() const override
+		virtual ExecutionResult execute(Scope& scope) override
 		{
-			return ExecutionResult(ExecutionResult::Type::Return, getValue());
+			return ExecutionResult(ExecutionResult::Type::Return, getValue(scope));
 		}
 	};
 
@@ -94,10 +94,16 @@ public:
 	public:
 		int value;
 		IntegerLiteralNode(int v = 0) : value(v) { }
-		virtual ExecutionResult execute() const override
+		virtual ExecutionResult execute(Scope& scope) override
 		{
 			return ExecutionResult(ExecutionResult::Type::Normal,value);
 		}
+	};
+
+	class booleanLiteralNode : public ExpressionNode
+	{
+	public:
+
 	};
 
 	class BinaryOpNode : public ExpressionNode
@@ -111,23 +117,23 @@ public:
 		
 		BinaryOpNode(Mode m, ExpressionNode* l = nullptr, ExpressionNode* r = nullptr) : mode(m), LOperand(l), ROperand(r) { }
 		~BinaryOpNode() { delete LOperand; delete ROperand; }
-		virtual ExecutionResult execute() const override
+		virtual ExecutionResult execute(Scope& scope) override
 		{
 			ExecutionResult result;
 			switch (mode)
 			{
-			case Mode::ADD:	result.value = LOperand->execute().value + ROperand->execute().value; break;
-			case Mode::SUB:	result.value = LOperand->execute().value - ROperand->execute().value; break;
-			case Mode::MUL:	result.value = LOperand->execute().value * ROperand->execute().value; break;
-			case Mode::DIV:	result.value = LOperand->execute().value / ROperand->execute().value; break;
-			case Mode::MOD:	result.value = LOperand->execute().value % ROperand->execute().value; break;
-			case Mode::GT:	result.value = LOperand->execute().value > ROperand->execute().value; break;
-			case Mode::LT:	result.value = LOperand->execute().value < ROperand->execute().value; break;
-			case Mode::AND: result.value = LOperand->execute().value && ROperand->execute().value; break;
-			case Mode::OR:	result.value = LOperand->execute().value || ROperand->execute().value; break;
+			case Mode::ADD:	result.value = LOperand->execute(scope).value + ROperand->execute(scope).value; break;
+			case Mode::SUB:	result.value = LOperand->execute(scope).value - ROperand->execute(scope).value; break;
+			case Mode::MUL:	result.value = LOperand->execute(scope).value * ROperand->execute(scope).value; break;
+			case Mode::DIV:	result.value = LOperand->execute(scope).value / ROperand->execute(scope).value; break;
+			case Mode::MOD:	result.value = LOperand->execute(scope).value % ROperand->execute(scope).value; break;
+			case Mode::GT:	result.value = LOperand->execute(scope).value > ROperand->execute(scope).value; break;
+			case Mode::LT:	result.value = LOperand->execute(scope).value < ROperand->execute(scope).value; break;
+			case Mode::AND: result.value = LOperand->execute(scope).value && ROperand->execute(scope).value; break;
+			case Mode::OR:	result.value = LOperand->execute(scope).value || ROperand->execute(scope).value; break;
 			case Mode::ASS: 
-				result = ROperand->execute();
-				((IdentifierNode*)LOperand)->setValue(result.value);
+				result = ROperand->execute(scope);
+				((IdentifierNode*)LOperand)->setValue(scope, result.value);
 				break;
 			}
 			return result;
@@ -144,16 +150,16 @@ public:
 
 		UnaryOpNode(Mode m, ExpressionNode* o) : mode(m), operand(o) { }
 		~UnaryOpNode() { delete operand; }
-		virtual ExecutionResult execute() const override
+		virtual ExecutionResult execute(Scope& scope) override
 		{
 			ExecutionResult result;
 			switch (mode)
 			{
 			case Mode::NEG:
-				result.value = - (operand->execute().value);
+				result.value = -(operand->execute(scope).value);
 				break;
 			case Mode::NOT:
-				result.value = !(operand->execute().value);
+				result.value = !(operand->execute(scope).value);
 				break;
 			}
 			return result;
@@ -166,9 +172,28 @@ public:
 		ExpressionNode* expression;
 		ExpressionStatementNode(ExpressionNode* e = nullptr) : expression(e) { }
 		~ExpressionStatementNode() { delete expression; }
-		virtual ExecutionResult execute() const override
+		virtual ExecutionResult execute(Scope& scope) override
 		{
-			return expression->execute();
+			return expression->execute(scope);
+		}
+	};
+
+	class VariableDeclarationNode : public StatementNode
+	{
+	public:
+		string identifier;
+		ExpressionNode* initializerExpression;
+		VariableDeclarationNode(const string& identifier, ExpressionNode* n = nullptr) : identifier(identifier), initializerExpression(n) { }
+		~VariableDeclarationNode() { }
+		virtual ExecutionResult execute(Scope& scope) override
+		{
+			if (initializerExpression)
+			{
+				ExecutionResult execution = initializerExpression->execute(scope);
+				scope.pushVariable(identifier, execution.value);
+			}
+			else scope.pushVariable(identifier, 0);
+			return ExecutionResult(ExecutionResult::Type::VariableDeclaration);
 		}
 	};
 
@@ -178,9 +203,9 @@ public:
 		ExpressionNode* expression;
 		PrintNode(ExpressionNode* e = nullptr) : expression(e) { }
 		~PrintNode() { delete expression; }
-		virtual ExecutionResult execute() const override
+		virtual ExecutionResult execute(Scope& scope) override
 		{
-			cout << expression->execute().value << endl;
+			cout << expression->execute(scope).value << endl;
 			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
 	};
@@ -194,11 +219,11 @@ public:
 
 		IfNode() : condition(nullptr), body(nullptr), elseBody(nullptr) { }
 		~IfNode() { delete condition; delete body; delete elseBody; }
-		virtual ExecutionResult execute() const override
+		virtual ExecutionResult execute(Scope& scope) override
 		{
-			if (condition->execute().value != 0) return body->execute();
-			else if (elseBody) return (elseBody->execute());
-			else return ExecutionResult(ExecutionResult::Type::Normal);
+			if (condition->execute(scope).value != 0) return body->execute(scope);
+			else if (elseBody) return (elseBody->execute(scope));
+			else return ExecutionResult(ExecutionResult::Type::Null);
 		}
 	};
 
@@ -208,9 +233,9 @@ public:
 		IfNode* ifNode;
 		IfExpressionNode(IfNode* n = nullptr) : ifNode(n) { }
 		~IfExpressionNode() { delete ifNode; }
-		virtual ExecutionResult execute() const override
+		virtual ExecutionResult execute(Scope& scope) override
 		{
-			return ifNode->execute();
+			return ifNode->execute(scope);
 		}
 	};
 
@@ -222,11 +247,11 @@ public:
 
 		WhileNode() : condition(nullptr), body(nullptr) { }
 		~WhileNode() { delete condition; delete body; }
-		virtual ExecutionResult execute() const override
+		virtual ExecutionResult execute(Scope& scope) override
 		{
-			while (condition->execute().value)
+			while (condition->execute(scope).value)
 			{
-				ExecutionResult execution = body->execute();
+				ExecutionResult execution = body->execute(scope);
 				if (execution.type == ExecutionResult::Type::Break) { break; }
 				if (execution.type == ExecutionResult::Type::Continue) { continue; }
 			}
@@ -239,7 +264,7 @@ public:
 	public:
 		BreakNode() = default;
 		~BreakNode() = default;
-		virtual ExecutionResult execute() const override
+		virtual ExecutionResult execute(Scope& scope) override
 		{
 			return ExecutionResult(ExecutionResult::Type::Break);
 		}
@@ -247,7 +272,7 @@ public:
 
 	void execute() 
 	{
-		// environment??
-		root->execute();
+		Scope scope;
+		root->execute(scope);
 	}
 };
