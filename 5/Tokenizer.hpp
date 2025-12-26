@@ -15,18 +15,18 @@ public:
 	{
 	public:
 		enum class Type { 
-			PRINT, PRINTLN, PRINTCHAR,
 			VAR, GLOBAL,
-			ASSIGN,
 			EQUAL, GREATER, LESS, GREATEREQUAL, LESSEQUAL,
 			AND, OR, NOT,
 			PLUS, MINUS, 
 			STAR, SLASH, MOD, 
 			PLUSPLUS, MINUSMINUS, EQUALEQUAL, NOTEQUAL,
-			LPAREN, RPAREN, LCURLY, RCURLY, 
-			NUM, IDENT, TRUE, FALSE,
+			LPAREN, RPAREN, LCURLY, RCURLY,
+			NUM, CHAR, IDENT, TRUE, FALSE,
 			SEMICOLON, COMMA,
 			IF, ELSE, WHILE, FOR,
+			PRINT, PRINTLN, PRINTCHAR,
+			RANDOM,
 			BREAK, CONTINUE,
 			ERROR, END,
 		};
@@ -34,30 +34,39 @@ public:
 		Type type;
 		int value;
 		string text;
-
+		char character;
+	
 		Token() { }; // default constructor, allows creating an uninitialized array of Token
 
-		Token(Type t, int v = 0, const string& s = "") : type(t), value(v), text(s) { }
+		Token(Type t, int v = 0, const string& s = "", char c = ' ') : type(t), value(v), text(s), character(c) {}
 		
-		const string& print(ostream& out) const
+		static string toString(Token::Type type)
 		{
 			switch (type)
 			{
-			case Type::PLUS: return "PLUS";
-			case Type::MINUS: return "MINUS";
-			case Type::STAR: return "STAR";
-			case Type::SLASH: return "SLASH";
-			case Type::LPAREN: return "LPAREN";
-			case Type::RPAREN: return "RPAREN";
-			case Type::NUM: return "NUMBER";
-			case Type::IDENT: return "IDENTIFIER";
-			case Type::EQUAL: return "EQUAL";
-			case Type::END: return "END";
-			case Type::IF: return "IF";
-			case Type::LCURLY: return "LCURLY";
-			case Type::RCURLY: return "RCURLY";
-			case Type::SEMICOLON: return "SEMICOLON";
+			case Type::VAR:			return "VAR";
+			case Type::GLOBAL:		return "GLOBAL";
+			case Type::PLUS:		return "PLUS";
+			case Type::MINUS:		return "MINUS";
+			case Type::STAR:		return "STAR";
+			case Type::SLASH:		return "SLASH";
+			case Type::MOD:			return "MOD";
+			case Type::LPAREN:		return "LPAREN";
+			case Type::RPAREN:		return "RPAREN";
+			case Type::LCURLY:		return "LCURLY";
+			case Type::RCURLY:		return "RCURLY";
+			case Type::NUM:			return "NUMBER";
+			case Type::CHAR:		return "CHAR";
+			case Type::IDENT:		return "IDENTIFIER";
+			case Type::EQUAL:		return "EQUAL";
+			case Type::END:			return "END";
+			case Type::IF:			return "IF";
+			case Type::SEMICOLON:	return "SEMICOLON";
+			case Type::PRINT:		return "PRINT";
+			case Type::PRINTLN:		return "PRINTLN";
+			case Type::PRINTCHAR:	return "PRINTCHAR";
 			}
+			return "UNDEFINED";
 		}
 	};
 
@@ -69,8 +78,7 @@ public:
 	{
 		for (Token token : tokenList)
 		{
-			token.print(out);
-			out << " ";
+			out << Token::toString(token.type) << " ";
 		}
 		cout << endl;
 	}
@@ -102,6 +110,7 @@ public:
 				if (textString.compare("print") == 0)			tokenList.push(Token(Token::Type::PRINT));
 				else if (textString.compare("println") == 0)	tokenList.push(Token(Token::Type::PRINTLN));
 				else if (textString.compare("printchar") == 0)	tokenList.push(Token(Token::Type::PRINTCHAR));
+				else if (textString.compare("random") == 0)		tokenList.push(Token(Token::Type::RANDOM));
 				else if (textString.compare("var") == 0)		tokenList.push(Token(Token::Type::VAR));
 				else if (textString.compare("global") == 0)		tokenList.push(Token(Token::Type::GLOBAL));
 				else if (textString.compare("true") == 0)		tokenList.push(Token(Token::Type::TRUE));
@@ -152,8 +161,25 @@ public:
 					if (inputString[i + 1] != '=') { tokenList.push(Token(Token::Type::NOT)); i++; }
 					else { tokenList.push(Token(Token::Type::NOTEQUAL)); i += 2; }
 					break;
+				case '&': 
+					if (inputString[i + 1] != '&') { /*...*/ i++; }
+					else { tokenList.push(Token(Token::Type::AND)); i += 2; }
+					break;
+				case '|': 
+					if (inputString[i + 1] != '|') { /*...*/ i++; }
+					else { tokenList.push(Token(Token::Type::OR)); i += 2; }
+					break;
 				case ';': tokenList.push(Token(Token::Type::SEMICOLON));	i++; break;
 				case ',': tokenList.push(Token(Token::Type::COMMA));		i++; break;
+				case '#':
+					while (i < inputString.size() && inputString[i] != '\n') { i++; } i++;
+					break;
+				case '\'':
+					i++;
+					tokenList.push(Token(Token::Type::CHAR, 0, "", inputString[i]));
+					i++;
+					if (inputString[i] == '\'') i++;
+					break;
 				}
 			}
 		}

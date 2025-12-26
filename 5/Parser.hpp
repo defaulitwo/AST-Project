@@ -48,9 +48,9 @@ private:
 	{
 		if (peek().type != type)
 		{
-			cout << (int)type << '\n';
-			cout << (int)peek().type << '\n';
-			string error = "Unexpected Token";
+			string error = "Unexpected token, expected " 
+				+ Token::toString(type)
+			+", found " + Token::toString(peek().type);
 			throw runtime_error(error);
 		}
 		else
@@ -419,6 +419,14 @@ private:
 			value = expect(Token::Type::NUM).value;
 			returnNode = new AST::IntegerLiteralNode(value);
 			break;
+		case Token::Type::CHAR:
+			value = (int)expect(Token::Type::CHAR).character;
+			returnNode = new AST::IntegerLiteralNode(value);
+			break;
+		case Token::Type::RANDOM:
+			expect(Token::Type::RANDOM);
+			returnNode = new AST::RandomNode();
+			break;
 		case Token::Type::TRUE:
 			expect(Token::Type::TRUE);
 			returnNode = new AST::IntegerLiteralNode(1);
@@ -433,8 +441,10 @@ private:
 			expect(Token::Type::RPAREN);
 			break;
 		default:
-			cout << (int)peek().type << endl;
-			throw runtime_error("Unexpected token in parsePrimary()");
+			throw runtime_error(
+				"Unexpected token in parsePrimary(), found " 
+				+ Token::toString(peek().type)
+			);
 		}
 		return returnNode;
 	}

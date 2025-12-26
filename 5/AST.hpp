@@ -8,9 +8,9 @@
 #include <string>
 #include <iostream>
 #include <ostream>
-#include "DynamicList.hpp";
-#include "ExecutionResult.hpp";
-#include "Environment.hpp";
+#include "DynamicList.hpp"
+#include "ExecutionResult.hpp"
+#include "Environment.hpp"
 using namespace std;
 
 class AST
@@ -90,9 +90,20 @@ public:
 	public:
 		int value;
 		IntegerLiteralNode(int v = 0) : value(v) { }
+		~IntegerLiteralNode() { }
 		virtual ExecutionResult execute(Environment& env) override
 		{
 			return ExecutionResult(ExecutionResult::Type::Normal,value);
+		}
+	};
+
+	class RandomNode : public ExpressionNode
+	{
+	public:
+		virtual ExecutionResult execute(Environment& env) override
+		{
+			int random = rand();
+			return ExecutionResult(ExecutionResult::Type::Normal, random);
 		}
 	};
 
