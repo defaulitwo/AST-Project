@@ -39,24 +39,24 @@ public:
 
 		Token(Type t, int v = 0, const string& s = "") : type(t), value(v), text(s) { }
 		
-		void print(ostream& out) const
+		const string& print(ostream& out) const
 		{
 			switch (type)
 			{
-			case Type::PLUS: out << "PLUS"; break;
-			case Type::MINUS: out << "MINUS"; break;
-			case Type::STAR: out << "STAR"; break;
-			case Type::SLASH: out << "SLASH"; break;
-			case Type::LPAREN: out << "LPAREN"; break;
-			case Type::RPAREN: out << "RPAREN"; break;
-			case Type::NUM: out << "NUMBER(" << value << ")"; break;
-			case Type::IDENT: out << "IDENTIFIER(" << text << ")"; break;
-			case Type::EQUAL: out << "EQUAL"; break;
-			case Type::END: out << "END"; break;
-			case Type::IF: out << "IF"; break;
-			case Type::LCURLY: out << "LCURLY"; break;
-			case Type::RCURLY: out << "RCURLY"; break;
-			case Type::SEMICOLON: out << "SEMICOLON"; break;
+			case Type::PLUS: return "PLUS";
+			case Type::MINUS: return "MINUS";
+			case Type::STAR: return "STAR";
+			case Type::SLASH: return "SLASH";
+			case Type::LPAREN: return "LPAREN";
+			case Type::RPAREN: return "RPAREN";
+			case Type::NUM: return "NUMBER";
+			case Type::IDENT: return "IDENTIFIER";
+			case Type::EQUAL: return "EQUAL";
+			case Type::END: return "END";
+			case Type::IF: return "IF";
+			case Type::LCURLY: return "LCURLY";
+			case Type::RCURLY: return "RCURLY";
+			case Type::SEMICOLON: return "SEMICOLON";
 			}
 		}
 	};
@@ -118,13 +118,17 @@ public:
 			}
 			else 
 			{
+				bool canLookAhead = (i + 1) < tokenList.size();
 				switch (inputString[i])
 				{
 				case '+': 
 					if (inputString[i + 1] != '+') { tokenList.push(Token(Token::Type::PLUS)); i++; }
 					else { tokenList.push(Token(Token::Type::PLUSPLUS)); i += 2; }
 					break;
-				case '-': tokenList.push(Token(Token::Type::MINUS));	i++; break;
+				case '-': 					
+					if (inputString[i + 1] != '-') { tokenList.push(Token(Token::Type::MINUS)); i++; }
+					else { tokenList.push(Token(Token::Type::MINUSMINUS)); i += 2; }
+					break;
 				case '*': tokenList.push(Token(Token::Type::STAR));		i++; break;
 				case '/': tokenList.push(Token(Token::Type::SLASH));	i++; break;
 				case '%': tokenList.push(Token(Token::Type::MOD));		i++; break;
@@ -133,7 +137,7 @@ public:
 				case '{': tokenList.push(Token(Token::Type::LCURLY));	i++; break;
 				case '}': tokenList.push(Token(Token::Type::RCURLY));	i++; break;
 				case '=': 
-					if (inputString[i + 1] != '=') { tokenList.push(Token(Token::Type::EQUAL)); i++; } 
+					if (inputString[i + 1] != '=') { tokenList.push(Token(Token::Type::EQUAL)); i++; }
 					else { tokenList.push(Token(Token::Type::EQUALEQUAL)); i += 2; }
 					break;
 				case '>':

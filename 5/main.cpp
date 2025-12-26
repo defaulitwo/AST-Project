@@ -28,11 +28,13 @@ int main()
             }
         }
 
+        cout << input;
+
         // tokenizing the input string, generating the token list
         Tokenizer tokenizer(input);
-        //cout << "Tokenization result:" << endl;
-        //tokenizer.printTokensTo(cout);
-        //cout << endl;
+        cout << "Tokenization result:" << endl;
+        tokenizer.printTokensTo(cout);
+        cout << endl;
 
         // parsing the token list, building AST
         try 

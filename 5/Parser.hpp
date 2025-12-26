@@ -48,8 +48,10 @@ private:
 	{
 		if (peek().type != type)
 		{
-			cout << (int)type;
-			throw runtime_error("Unexpected Token");
+			cout << (int)type << '\n';
+			cout << (int)peek().type << '\n';
+			string error = "Unexpected Token";
+			throw runtime_error(error);
 		}
 		else
 		{
@@ -384,6 +386,14 @@ private:
 			identifier = expect(Token::Type::IDENT).text;
 			returnNode = new AST::UnaryOpNode(
 				AST::UnaryOpNode::Mode::INC, 
+				new AST::IdentifierNode(identifier)
+			);
+			break;
+		case Token::Type::MINUSMINUS:
+			expect(Token::Type::MINUSMINUS);
+			identifier = expect(Token::Type::IDENT).text;
+			returnNode = new AST::UnaryOpNode(
+				AST::UnaryOpNode::Mode::DEC, 
 				new AST::IdentifierNode(identifier)
 			);
 			break;

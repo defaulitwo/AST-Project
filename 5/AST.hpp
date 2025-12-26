@@ -137,7 +137,7 @@ public:
 	class UnaryOpNode : public ExpressionNode
 	{
 	public:
-		enum class Mode { NEG, INC, DEC, NOT };
+		enum class Mode { NEG, NOT, INC, DEC };
 
 		Mode mode;
 		ExpressionNode* operand;
@@ -147,13 +147,19 @@ public:
 		virtual ExecutionResult execute(Environment& env) override
 		{
 			ExecutionResult result;
+			string identifier;
 			switch (mode)
 			{
 			case Mode::NEG: result.value = -(operand->execute(env).value); break;
 			case Mode::NOT: result.value = !(operand->execute(env).value); break;
 			case Mode::INC:
-				const string& identifier = ((IdentifierNode*)operand)->identifier;
+				identifier = ((IdentifierNode*)operand)->identifier;
 				env.setValue(identifier, env.getValue(identifier) + 1);
+				result.value = env.getValue(identifier);
+				break;
+			case Mode::DEC:
+				identifier = ((IdentifierNode*)operand)->identifier;
+				env.setValue(identifier, env.getValue(identifier) - 1);
 				result.value = env.getValue(identifier);
 				break;
 			}
