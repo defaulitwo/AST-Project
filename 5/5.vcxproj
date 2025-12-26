@@ -135,7 +135,7 @@
     <ClInclude Include="DynamicList.hpp" />
     <ClInclude Include="ExecutionResult.hpp" />
     <ClInclude Include="Parser.hpp" />
-    <ClInclude Include="Scope.hpp" />
+    <ClInclude Include="Environment.hpp" />
     <ClInclude Include="Tokenizer.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

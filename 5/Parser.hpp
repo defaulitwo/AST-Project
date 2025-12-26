@@ -62,8 +62,8 @@ private:
 		AST::StatementNode* returnNode;
 		switch (peek().type)
 		{
-		case Token::Type::GLOBAL:
-		case Token::Type::VAR: // variable declaration
+		case Token::Type::GLOBAL: // variable declarations
+		case Token::Type::VAR: 
 			returnNode = parseVariableDeclaration();
 			// handling consuming semicolon here to allow variable declaration in for loop
 			expect(Token::Type::SEMICOLON); 
@@ -71,8 +71,9 @@ private:
 		case Token::Type::LCURLY: // statement block {...}
 			returnNode = parseBlock();
 			break;
-		case Token::Type::PRINTLN:
-		case Token::Type::PRINT: // print statement
+		case Token::Type::PRINTLN: // print statement
+		case Token::Type::PRINTCHAR:
+		case Token::Type::PRINT:
 			returnNode = parsePrint();
 			break;
 		case Token::Type::IF: // if statement
@@ -81,7 +82,7 @@ private:
 		case Token::Type::WHILE: // while loop
 			returnNode = parseWhile();
 			break;
-		case Token::Type::FOR: // while loop
+		case Token::Type::FOR: // for loop
 			returnNode = parseFor();
 			break;
 		case Token::Type::BREAK: // break
@@ -149,6 +150,10 @@ private:
 		case Token::Type::PRINTLN:
 			expect(Token::Type::PRINTLN);
 			returnNode->type = AST::PrintNode::Type::PRINTLN;
+			break;
+		case Token::Type::PRINTCHAR:
+			expect(Token::Type::PRINTCHAR);
+			returnNode->type = AST::PrintNode::Type::PRINTCHAR;
 			break;
 		}
 		if (peek().type != Token::Type::SEMICOLON)
@@ -296,7 +301,8 @@ private:
 	AST::ExpressionNode* parseComparison()
 	{
 		AST::ExpressionNode* returnNode = parseAdditive();
-		while (peek().type == Token::Type::LESS || peek().type == Token::Type::GREATER)
+		while (peek().type == Token::Type::LESS || peek().type == Token::Type::GREATER ||
+				peek().type == Token::Type::LESSEQUAL || peek().type == Token::Type::GREATEREQUAL)
 		{
 			Token operation = eat();
 			switch (operation.type)
@@ -306,6 +312,12 @@ private:
 				break;
 			case Token::Type::LESS:
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::LT, returnNode, parseAdditive());
+				break;
+			case Token::Type::GREATEREQUAL:
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::GTE, returnNode, parseAdditive());
+				break;
+			case Token::Type::LESSEQUAL:
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::LTE, returnNode, parseAdditive());
 				break;
 			}
 		}
@@ -356,6 +368,7 @@ private:
 	AST::ExpressionNode* parseUnary()
 	{
 		AST::ExpressionNode* returnNode;
+		string identifier;
 		switch (peek().type)
 		{
 		case Token::Type::MINUS:
@@ -368,7 +381,11 @@ private:
 			break;
 		case Token::Type::PLUSPLUS:
 			expect(Token::Type::PLUSPLUS);
-			returnNode = new AST::UnaryOpNode(AST::UnaryOpNode::Mode::INC, parseUnary());
+			identifier = expect(Token::Type::IDENT).text;
+			returnNode = new AST::UnaryOpNode(
+				AST::UnaryOpNode::Mode::INC, 
+				new AST::IdentifierNode(identifier)
+			);
 			break;
 		default: 
 			returnNode = parsePrimary();

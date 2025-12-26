@@ -50,7 +50,7 @@
     <ClInclude Include="ExecutionResult.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Scope.hpp">
+    <ClInclude Include="Environment.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

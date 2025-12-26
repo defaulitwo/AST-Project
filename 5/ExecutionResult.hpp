@@ -7,8 +7,8 @@ public:
 	};
 
 	int value;
-
 	Type type;
+	
 	ExecutionResult(Type t = Type::Normal, int v = 0) : type(t), value(v) { }
 };
 

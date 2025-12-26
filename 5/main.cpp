@@ -2,13 +2,14 @@
 #include "Tokenizer.hpp"
 #include "Parser.hpp"
 #include "AST.hpp"
-#include "Scope.hpp"
+#include "Environment.hpp"
 using namespace std;
 
 int main()
 {
-    Scope scope;
+    Environment env;
 
+    // REPL
     while (true)
     {
         // getting input string from user
@@ -38,9 +39,7 @@ int main()
         {
             Parser parser;
             AST tree = parser.Parse(tokenizer);
-
-            tree.execute(scope);
-
+            tree.execute(env);
             cout << endl;
         }
         catch (runtime_error error)
