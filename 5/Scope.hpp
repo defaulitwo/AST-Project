@@ -18,38 +18,50 @@ public:
 	};
 
 	DynamicList<Variable> variables;
+	DynamicList<Variable> globals;
 
 	Scope() = default;
 	
 	void pushVariable(const string& ident, int initialValue)
 	{
 		variables.push(Variable(ident, initialValue));
-
 	}
 
-	void pop(int n)
+	void pushGlobal(const string& ident, int initialValue)
+	{
+		globals.push(Variable(ident, initialValue));
+	}
+
+	void popVariables(int n)
 	{
 		for (int i = 0; i < n; i++) if(!variables.empty()) variables.pop();
 	}
 
 	int getValue(const string& name)
 	{
+		for (Variable v : globals) // first check globals (globals have higher priority)
+		{
+			if (name.compare(v.identifier) == 0) return v.value;
+		}
 		for (int i = variables.size() - 1; i >= 0; i--) // traverse scope backwards
 		{
-			Variable& currentVar = variables[i];
-			if (name.compare(currentVar.identifier) == 0) return currentVar.value;
+			Variable& v = variables[i];
+			if (name.compare(v.identifier) == 0) return v.value;
 		}
 		return 0;
 	}
 
-	void setValue(const string& name, int v)
+	void setValue(const string& name, int value)
 	{
+		for (Variable v : globals) // first check globals (globals have higher priority)
+		{
+			if (name.compare(v.identifier) == 0) { v.value = value; return; }
+		}
 		for (int i = variables.size() - 1; i >= 0; i--) // traverse scope backwards
 		{
-			Variable& currentVar = variables[i];
-			if (name.compare(currentVar.identifier) == 0) currentVar.value = v;
+			Variable& v = variables[i];
+			if (name.compare(v.identifier) == 0) { v.value = value; return; }
 		}
 	}
-
 };
 

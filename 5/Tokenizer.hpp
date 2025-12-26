@@ -14,21 +14,21 @@ public:
 	{
 	public:
 		enum class Type { 
-			PRINT,
-			VAR,
+			PRINT, PRINTLN,
+			VAR, GLOBAL,
+			TRUE, FALSE,
 			ASSIGN,
 			GREATER, LESS,
 			AND, OR, NOT,
 			PLUS, MINUS, 
 			STAR, SLASH, MOD, 
-			PLUSPLUS, MINUSMINUS, EQUALEQUAL,
+			PLUSPLUS, MINUSMINUS, EQUALEQUAL, NOTEQUAL,
 			LPAREN, RPAREN, LCURLY, RCURLY, 
-			NUM, IDENT, EQUAL, END,
-			SEMICOLON,
-			IF, ELSE,
-			WHILE,
+			NUM, IDENT, EQUAL, 
+			SEMICOLON, COMMA,
+			IF, ELSE, WHILE, FOR,
 			BREAK, CONTINUE,
-			ERROR,
+			ERROR, END,
 		};
 
 		Type type;
@@ -89,21 +89,26 @@ public:
 					numString += inputString[i];
 					i++;
 				}
-				tokenList.push(Token(Token::Type::NUM, stod(numString)));
+				tokenList.push(Token(Token::Type::NUM, stoi(numString)));
 			}
 			else if (isalpha(inputString[i])) // this if statement body is to be re-done if expanded to a full compiler
 			{
 				string textString;
-				while (isalpha(inputString[i]))
+				while (isalpha(inputString[i]) || isdigit(inputString[i]) || inputString[i] == '_')
 				{
 					textString += inputString[i];
 					i++;
 				}
 				if (textString.compare("print") == 0)		tokenList.push(Token(Token::Type::PRINT));
+				else if (textString.compare("println") == 0)tokenList.push(Token(Token::Type::PRINTLN));
 				else if (textString.compare("var") == 0)	tokenList.push(Token(Token::Type::VAR));
+				else if (textString.compare("global") == 0)	tokenList.push(Token(Token::Type::GLOBAL));
+				else if (textString.compare("true") == 0)	tokenList.push(Token(Token::Type::TRUE));
+				else if (textString.compare("false") == 0)	tokenList.push(Token(Token::Type::FALSE));
 				else if (textString.compare("if") == 0)		tokenList.push(Token(Token::Type::IF, 0, textString));
 				else if (textString.compare("else") == 0)	tokenList.push(Token(Token::Type::ELSE, 0, textString));
 				else if (textString.compare("while") == 0)	tokenList.push(Token(Token::Type::WHILE, 0, textString));
+				else if (textString.compare("for") == 0)	tokenList.push(Token(Token::Type::FOR, 0, textString));
 				else if (textString.compare("break") == 0)	tokenList.push(Token(Token::Type::BREAK, 0, textString));
 				else if (textString.compare("and") == 0)	tokenList.push(Token(Token::Type::AND));
 				else if (textString.compare("or") == 0)		tokenList.push(Token(Token::Type::OR));
@@ -128,6 +133,7 @@ public:
 				case '<': tokenList.push(Token(Token::Type::LESS)); break;
 				case '!': tokenList.push(Token(Token::Type::NOT)); break;
 				case ';': tokenList.push(Token(Token::Type::SEMICOLON)); break;
+				case ',': tokenList.push(Token(Token::Type::COMMA)); break;
 				}
 				i++;
 			}

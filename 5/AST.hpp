@@ -59,15 +59,13 @@ public:
 				if (execution.type == ExecutionResult::Type::Break) { return ExecutionResult(execution.type); }
 				if (execution.type == ExecutionResult::Type::VariableDeclaration) { variableCount++; }
 			}
-			scope.pop(variableCount);
+			scope.popVariables(variableCount);
 			variableCount = 0; // reset variableCount for later calls
 			return execution;
 		}
 	};
 
-	StatementNode* root;
 
-	AST() : root(nullptr) { }
 
 	class IdentifierNode : public ExpressionNode
 	{
@@ -100,16 +98,10 @@ public:
 		}
 	};
 
-	class booleanLiteralNode : public ExpressionNode
-	{
-	public:
-
-	};
-
 	class BinaryOpNode : public ExpressionNode
 	{
 	public:
-		enum class Mode { ADD, SUB, MUL, DIV, MOD, ASS, AND, OR, EQ, LT, GT, LTE, GTE };
+		enum class Mode { ADD, SUB, MUL, DIV, MOD, ASS, AND, OR, EQ, NEQ, LT, GT, LTE, GTE };
 
 		Mode mode;
 		ExpressionNode* LOperand;
@@ -181,31 +173,56 @@ public:
 	class VariableDeclarationNode : public StatementNode
 	{
 	public:
+		enum class Type { VARIABLE, GLOBAL };
 		string identifier;
 		ExpressionNode* initializerExpression;
-		VariableDeclarationNode(const string& identifier, ExpressionNode* n = nullptr) : identifier(identifier), initializerExpression(n) { }
+		Type type;
+		VariableDeclarationNode(const string& identifier = "", ExpressionNode* n = nullptr) : identifier(identifier), initializerExpression(n) {}
 		~VariableDeclarationNode() { }
 		virtual ExecutionResult execute(Scope& scope) override
 		{
 			if (initializerExpression)
 			{
 				ExecutionResult execution = initializerExpression->execute(scope);
-				scope.pushVariable(identifier, execution.value);
+				switch (type)
+				{
+				case Type::VARIABLE:
+					scope.pushVariable(identifier, execution.value);
+					break;
+				case Type::GLOBAL:
+					scope.pushGlobal(identifier, execution.value);
+					break;
+				}
 			}
-			else scope.pushVariable(identifier, 0);
-			return ExecutionResult(ExecutionResult::Type::VariableDeclaration);
+			else
+			{
+				switch (type)
+				{
+				case Type::VARIABLE:
+					scope.pushVariable(identifier, 0);
+					break;
+				case Type::GLOBAL:
+					scope.pushGlobal(identifier, 0);
+					break;
+				}
+			}
+			if (type == Type::VARIABLE) return ExecutionResult(ExecutionResult::Type::VariableDeclaration);
+			else return ExecutionResult(ExecutionResult::Type::GlobalDeclaration);
 		}
 	};
 
 	class PrintNode : public StatementNode
 	{
 	public:
+		enum class Type { PRINTEXPR, PRINTCHAR, PRINTLN };
+		Type type;
 		ExpressionNode* expression;
-		PrintNode(ExpressionNode* e = nullptr) : expression(e) { }
+		PrintNode(Type t = Type::PRINTEXPR, ExpressionNode* e = nullptr) : type(t), expression(e) { }
 		~PrintNode() { delete expression; }
 		virtual ExecutionResult execute(Scope& scope) override
 		{
-			cout << expression->execute(scope).value << endl;
+			if (expression) cout << expression->execute(scope).value;
+			if (type == Type::PRINTLN) cout << endl;
 			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
 	};
@@ -259,6 +276,30 @@ public:
 		}
 	};
 
+	class ForNode : public StatementNode
+	{
+	public:
+		VariableDeclarationNode* initialization;
+		ExpressionNode* condition;
+		ExpressionNode* update;
+		StatementNode* body;
+		ForNode() : initialization(nullptr), condition(nullptr), update(nullptr), body(nullptr) { }
+		~ForNode() { delete initialization; delete condition; delete update; delete body; }
+		virtual ExecutionResult execute(Scope& scope) override
+		{
+			initialization->execute(scope);
+			while (condition->execute(scope).value)
+			{
+				ExecutionResult execution = body->execute(scope);
+				if (execution.type == ExecutionResult::Type::Break) { break; }
+				if (execution.type == ExecutionResult::Type::Continue) { continue; }
+				update->execute(scope);
+			}
+			scope.popVariables(1); // pop the for loop's variable
+			return ExecutionResult();
+		}
+	};
+
 	class BreakNode : public StatementNode
 	{
 	public:
@@ -269,10 +310,13 @@ public:
 			return ExecutionResult(ExecutionResult::Type::Break);
 		}
 	};
-
-	void execute() 
+	
+	void execute(Scope& scope) 
 	{
-		Scope scope;
 		root->execute(scope);
 	}
+
+	StatementNode* root;
+	AST() : root(nullptr) {}
 };
+
