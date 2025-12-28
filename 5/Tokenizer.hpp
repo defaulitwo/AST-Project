@@ -24,10 +24,10 @@ public:
 			LPAREN, RPAREN, LCURLY, RCURLY,
 			NUM, CHAR, IDENT, TRUE, FALSE,
 			SEMICOLON, COMMA,
-			IF, ELSE, WHILE, FOR, DO,
+			IF, ELSE, WHILE, FOR, REPEAT, DO,
 			PRINT, PRINTLN, PRINTCHAR,
 			RANDOM,
-			BREAK, CONTINUE,
+			BREAK, CONTINUE, RETURN,
 			FUNC,
 			ERROR, END,
 		};
@@ -40,7 +40,7 @@ public:
 	
 		Token() { }; // default constructor, allows creating an uninitialized array of Token
 
-		Token(Type t, int v = 0, const string& s = "", char c = ' ') : type(t), value(v), text(s), character(c) {}
+		Token(Type t, int v = 0, const string& s = "", char c = 0) : type(t), value(v), text(s), character(c) {}
 		
 		static string toString(Token::Type type)
 		{
@@ -81,12 +81,15 @@ public:
 			case Type::ELSE:			return "ELSE";
 			case Type::WHILE:			return "WHILE";
 			case Type::FOR:				return "FOR";
+			case Type::REPEAT:			return "REPEAT";
+			case Type::DO:				return "DO";
 			case Type::PRINT:			return "PRINT";
 			case Type::PRINTLN:			return "PRINTLN";
 			case Type::PRINTCHAR:		return "PRINTCHAR";
 			case Type::RANDOM:			return "RANDOM";
 			case Type::BREAK:			return "BREAK";
 			case Type::CONTINUE:		return "CONTINUE";
+			case Type::RETURN:			return "RETURN";
 			case Type::ERROR:			return "ERROR";
 			case Type::END:				return "END";
 			}
@@ -97,6 +100,13 @@ public:
 	typedef Token::Type TokenType;
 
 	DynamicList<Token> tokenList;
+	int lineNumber = 0;
+
+	void pushToken(Token token)
+	{
+		token.lineNumber = lineNumber;
+		tokenList.push(token);
+	}
 
 	void printTokensTo(ostream& out) const
 	{
@@ -110,12 +120,11 @@ public:
 	Tokenizer(const string& inputString) 
 	{
 		int i = 0;
-		int lineNumber = 0;
 		while (i < inputString.size())
 		{
 			if (inputString[i] == '\n') lineNumber++;
-			if (isspace(inputString[i])) { i++; continue; }
-			if (isdigit(inputString[i]))
+			if (isspace(inputString[i])) { i++; continue; } // ignore whitespaces
+			if (isdigit(inputString[i])) // number literal
 			{
 				string numString;
 				while (isdigit(inputString[i]) || inputString[i] == '.')
@@ -123,7 +132,7 @@ public:
 					numString += inputString[i];
 					i++;
 				}
-				tokenList.push(Token(Token::Type::NUM, stoi(numString)));
+				pushToken(Token(Token::Type::NUM, stoi(numString)));
 			}
 			else if (isalpha(inputString[i]))
 			{
@@ -133,83 +142,87 @@ public:
 					textString += inputString[i];
 					i++;
 				}
-				if (textString.compare("print") == 0)			tokenList.push(Token(Token::Type::PRINT));
-				else if (textString.compare("println") == 0)	tokenList.push(Token(Token::Type::PRINTLN));
-				else if (textString.compare("printchar") == 0)	tokenList.push(Token(Token::Type::PRINTCHAR));
-				else if (textString.compare("random") == 0)		tokenList.push(Token(Token::Type::RANDOM));
-				else if (textString.compare("var") == 0)		tokenList.push(Token(Token::Type::VAR));
-				else if (textString.compare("global") == 0)		tokenList.push(Token(Token::Type::GLOBAL));
-				else if (textString.compare("input") == 0)		tokenList.push(Token(Token::Type::INPUT));
-				else if (textString.compare("true") == 0)		tokenList.push(Token(Token::Type::TRUE));
-				else if (textString.compare("false") == 0)		tokenList.push(Token(Token::Type::FALSE));
-				else if (textString.compare("if") == 0)			tokenList.push(Token(Token::Type::IF, 0, textString));
-				else if (textString.compare("else") == 0)		tokenList.push(Token(Token::Type::ELSE, 0, textString));
-				else if (textString.compare("while") == 0)		tokenList.push(Token(Token::Type::WHILE, 0, textString));
-				else if (textString.compare("for") == 0)		tokenList.push(Token(Token::Type::FOR, 0, textString));
-				else if (textString.compare("do") == 0)			tokenList.push(Token(Token::Type::DO, 0, textString));
-				else if (textString.compare("break") == 0)		tokenList.push(Token(Token::Type::BREAK, 0, textString));
-				else if (textString.compare("and") == 0)		tokenList.push(Token(Token::Type::AND));
-				else if (textString.compare("or") == 0)			tokenList.push(Token(Token::Type::OR));
-				else if (textString.compare("not") == 0)		tokenList.push(Token(Token::Type::NOT));
-				else											tokenList.push(Token(Token::Type::IDENT, 0, textString));
+				// reserved keywords
+				if (textString.compare("print") == 0)			pushToken(Token(Token::Type::PRINT));
+				else if (textString.compare("println") == 0)	pushToken(Token(Token::Type::PRINTLN));
+				else if (textString.compare("printchar") == 0)	pushToken(Token(Token::Type::PRINTCHAR));
+				else if (textString.compare("random") == 0)		pushToken(Token(Token::Type::RANDOM));
+				else if (textString.compare("var") == 0)		pushToken(Token(Token::Type::VAR));
+				else if (textString.compare("global") == 0)		pushToken(Token(Token::Type::GLOBAL));
+				else if (textString.compare("input") == 0)		pushToken(Token(Token::Type::INPUT));
+				else if (textString.compare("true") == 0)		pushToken(Token(Token::Type::TRUE));
+				else if (textString.compare("false") == 0)		pushToken(Token(Token::Type::FALSE));
+				else if (textString.compare("if") == 0)			pushToken(Token(Token::Type::IF));
+				else if (textString.compare("else") == 0)		pushToken(Token(Token::Type::ELSE));
+				else if (textString.compare("while") == 0)		pushToken(Token(Token::Type::WHILE));
+				else if (textString.compare("for") == 0)		pushToken(Token(Token::Type::FOR));
+				else if (textString.compare("repeat") == 0)		pushToken(Token(Token::Type::REPEAT));
+				else if (textString.compare("do") == 0)			pushToken(Token(Token::Type::DO));
+				else if (textString.compare("break") == 0)		pushToken(Token(Token::Type::BREAK));
+				else if (textString.compare("return") == 0)		pushToken(Token(Token::Type::RETURN));
+				else if (textString.compare("and") == 0)		pushToken(Token(Token::Type::AND));
+				else if (textString.compare("or") == 0)			pushToken(Token(Token::Type::OR));
+				else if (textString.compare("not") == 0)		pushToken(Token(Token::Type::NOT));
+				// identifier
+				else											pushToken(Token(Token::Type::IDENT, 0, textString));
 			}
-			else 
+			else // symbols
 			{
 				switch (inputString[i])
 				{
 				case '+': 
-					if (inputString[i + 1] != '+') { tokenList.push(Token(Token::Type::PLUS)); i++; }
-					else { tokenList.push(Token(Token::Type::PLUSPLUS)); i += 2; }
+					if (inputString[i + 1] != '+') { pushToken(Token(Token::Type::PLUS)); i++; }
+					else { pushToken(Token(Token::Type::PLUSPLUS)); i += 2; }
 					break;
 				case '-': 					
-					if (inputString[i + 1] != '-') { tokenList.push(Token(Token::Type::MINUS)); i++; }
-					else { tokenList.push(Token(Token::Type::MINUSMINUS)); i += 2; }
+					if (inputString[i + 1] != '-') { pushToken(Token(Token::Type::MINUS)); i++; }
+					else { pushToken(Token(Token::Type::MINUSMINUS)); i += 2; }
 					break;
-				case '*': tokenList.push(Token(Token::Type::STAR));		i++; break;
-				case '/': tokenList.push(Token(Token::Type::SLASH));	i++; break;
-				case '%': tokenList.push(Token(Token::Type::MOD));		i++; break;
-				case '(': tokenList.push(Token(Token::Type::LPAREN));	i++; break;
-				case ')': tokenList.push(Token(Token::Type::RPAREN));	i++; break;
-				case '{': tokenList.push(Token(Token::Type::LCURLY));	i++; break;
-				case '}': tokenList.push(Token(Token::Type::RCURLY));	i++; break;
+				case '*': pushToken(Token(Token::Type::STAR));		i++; break;
+				case '/': pushToken(Token(Token::Type::SLASH));	i++; break;
+				case '%': pushToken(Token(Token::Type::MOD));		i++; break;
+				case '(': pushToken(Token(Token::Type::LPAREN));	i++; break;
+				case ')': pushToken(Token(Token::Type::RPAREN));	i++; break;
+				case '{': pushToken(Token(Token::Type::LCURLY));	i++; break;
+				case '}': pushToken(Token(Token::Type::RCURLY));	i++; break;
 				case '=': 
-					if (inputString[i + 1] != '=') { tokenList.push(Token(Token::Type::EQUAL)); i++; }
-					else { tokenList.push(Token(Token::Type::EQUALEQUAL)); i += 2; }
+					if (inputString[i + 1] != '=') { pushToken(Token(Token::Type::EQUAL)); i++; }
+					else { pushToken(Token(Token::Type::EQUALEQUAL)); i += 2; }
 					break;
 				case '>':
-					if (inputString[i + 1] != '=') { tokenList.push(Token(Token::Type::GREATER)); i++; }
-					else { tokenList.push(Token(Token::Type::GREATEREQUAL)); i += 2; }
+					if (inputString[i + 1] != '=') { pushToken(Token(Token::Type::GREATER)); i++; }
+					else { pushToken(Token(Token::Type::GREATEREQUAL)); i += 2; }
 					break;
 				case '<':
-					if (inputString[i + 1] != '=') { tokenList.push(Token(Token::Type::LESS)); i++; }
-					else { tokenList.push(Token(Token::Type::LESSEQUAL)); i += 2; }
+					if (inputString[i + 1] != '=') { pushToken(Token(Token::Type::LESS)); i++; }
+					else { pushToken(Token(Token::Type::LESSEQUAL)); i += 2; }
 					break;
 				case '!': 
-					if (inputString[i + 1] != '=') { tokenList.push(Token(Token::Type::NOT)); i++; }
-					else { tokenList.push(Token(Token::Type::NOTEQUAL)); i += 2; }
+					if (inputString[i + 1] != '=') { pushToken(Token(Token::Type::NOT)); i++; }
+					else { pushToken(Token(Token::Type::NOTEQUAL)); i += 2; }
 					break;
 				case '&': 
 					if (inputString[i + 1] != '&') { /*...*/ i++; }
-					else { tokenList.push(Token(Token::Type::AND)); i += 2; }
+					else { pushToken(Token(Token::Type::AND)); i += 2; }
 					break;
 				case '|': 
 					if (inputString[i + 1] != '|') { /*...*/ i++; }
-					else { tokenList.push(Token(Token::Type::OR)); i += 2; }
+					else { pushToken(Token(Token::Type::OR)); i += 2; }
 					break;
-				case ';': tokenList.push(Token(Token::Type::SEMICOLON));	i++; break;
-				case ',': tokenList.push(Token(Token::Type::COMMA));		i++; break;
+				case ';': pushToken(Token(Token::Type::SEMICOLON));	i++; break;
+				case ',': pushToken(Token(Token::Type::COMMA));		i++; break;
 				case '#':
-					while (i < inputString.size() && inputString[i] != '\n') { i++; } i++;
+					while (i < inputString.size() && inputString[i] != '\n') i++; 
 					break;
 				case '\'':
 					i++;
-					tokenList.push(Token(Token::Type::CHAR, 0, "", inputString[i]));
+					pushToken(Token(Token::Type::CHAR, 0, "", inputString[i]));
 					i++;
 					if (inputString[i] == '\'') i++;
 					break;
 				}
 			}
 		}
-		tokenList.push(Token(Token::Type::END));
+		pushToken(Token(Token::Type::END));
 	}
 };

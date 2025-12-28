@@ -48,10 +48,10 @@ private:
 	{
 		if (peek().type != type)
 		{
-			string error = "\nParse error: Unexpected token, expected "
+			string error = "Parse error: Unexpected token, expected "
 				+ Token::toString(type)
-				+ ", found " + Token::toString(peek().type) + ", at line ";
-		/*		+ itoa(peek().lineNumber);*/
+				+ ", found " + Token::toString(peek().type) 
+				+ ", at line " + to_string(peek().lineNumber);
 			throw runtime_error(error);
 		}
 		else
@@ -102,6 +102,7 @@ private:
 		AST::StatementNode* returnNode;
 		switch (peek().type)
 		{
+		case Token::Type::INPUT:
 		case Token::Type::GLOBAL: // variable declarations
 		case Token::Type::VAR: 
 			returnNode = parseVariableDeclaration();
@@ -125,14 +126,19 @@ private:
 		case Token::Type::FOR: // for loop
 			returnNode = parseFor();
 			break;
+		case Token::Type::REPEAT: // for loop
+			returnNode = parseRepeat();
+			break;
 		case Token::Type::DO: // do-while loop
 			returnNode = parseDoWhile();
 			break;
+		case Token::Type::RETURN:
 		case Token::Type::BREAK: // break
-			returnNode = parseBreak();
+			returnNode = parseJumpStatement();
 			break;
 		default: // expression statement ex: x = 10+3;
 			returnNode = new AST::ExpressionStatementNode(parseExpression());
+			// semicolon is optional for expression statement
 			if (peek().type == Token::Type::SEMICOLON) expect(Token::Type::SEMICOLON);
 		}
 		return returnNode;
@@ -151,15 +157,21 @@ private:
 	{
 		AST::VariableDeclarationNode* returnNode;
 		returnNode = new AST::VariableDeclarationNode();
-		switch (peek().type)
+		Token declaration = peek();
+		eat();
+		switch (declaration.type)
 		{
 		case Token::Type::VAR:
-			expect(Token::Type::VAR);
+			//expect(Token::Type::VAR);
 			returnNode->type = AST::VariableDeclarationNode::Type::VARIABLE;
 			break;
 		case Token::Type::GLOBAL:
-			expect(Token::Type::GLOBAL);
+			//expect(Token::Type::GLOBAL);
 			returnNode->type = AST::VariableDeclarationNode::Type::GLOBAL;
+			break;
+		case Token::Type::INPUT:
+			//expect(Token::Type::INPUT);
+			returnNode->type = AST::VariableDeclarationNode::Type::INPUT;
 			break;
 		}
 		returnNode->identifier = expect(Token::Type::IDENT).text;
@@ -258,6 +270,15 @@ private:
 		return returnNode;
 	}
 
+	AST::RepeatNode* parseRepeat()
+	{
+		AST::RepeatNode* returnNode = new AST::RepeatNode();
+		expect(Token::Type::REPEAT);
+		returnNode->iterations = parseExpression();
+		returnNode->body = parseStatement();
+		return returnNode;
+	}
+
 	AST::DoWhileNode* parseDoWhile()
 	{
 		AST::DoWhileNode* returnNode = new AST::DoWhileNode();
@@ -268,19 +289,29 @@ private:
 		return returnNode;
 	}
 
-	AST::BreakNode* parseBreak()
+	AST::JumpNode* parseJumpStatement()
 	{
-		expect(Token::Type::BREAK);
+		AST::JumpNode* returnNode = new AST::JumpNode();
+		Token jump = eat();
+		switch (jump.type)
+		{
+		case Token::Type::BREAK:
+			returnNode->type = AST::JumpNode::Type::BREAK;
+			break;
+		case Token::Type::RETURN:
+			returnNode->type = AST::JumpNode::Type::RETURN;
+			if (peek().type != Token::Type::SEMICOLON) returnNode->expression = parseExpression();
+		}
 		expect(Token::Type::SEMICOLON);
-		return new AST::BreakNode;
+		return returnNode;
 	}
 
 	AST::ExpressionNode* parseExpression()
 	{
 		switch (peek().type)
 		{
-		case Token::Type::IF: // if expression, ex: x = if(y) {10;} else {20;};
-			return new AST::IfExpressionNode(parseIf());
+		case Token::Type::LCURLY: // if expression, ex: x = { if (y > x) 10 else 20 };
+			return new AST::StatementListExpressionNode(parseBlock());
 		default:
 			return parseAssignment();
 		}
@@ -485,8 +516,9 @@ private:
 			break;
 		default:
 			throw runtime_error(
-				"\nParse error: Unexpected token in parsePrimary(), found " 
+				"Parse error: Unexpected token in parsePrimary(), expected an expression, found " 
 				+ Token::toString(peek().type)
+				+ ", at line " + to_string(peek().lineNumber)
 			);
 		}
 		return returnNode;

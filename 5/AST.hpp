@@ -1,7 +1,7 @@
 // abstract syntax tree
 // this is the output of the parser stage after it parses the token list
 // Node class is a generic virtual class that all specific node types inherit from
-// each concrete node type implements its own code generation method, as it is distinct for all of them
+// each concrete node type implements its own execution method, as it is distinct for all of them
 // this structure also allows abstract types to be a common interface for the inheriting node types, as used in Parser.hpp parsing functions
 
 #pragma once
@@ -56,8 +56,9 @@ public:
 			for (StatementNode* statement : statements)
 			{
 				execution = statement->execute(env);
-				if (execution.type == ExecutionResult::Type::Break) { return ExecutionResult(execution.type); }
+				if (execution.type == ExecutionResult::Type::Break) { return execution; }
 				if (execution.type == ExecutionResult::Type::VariableDeclaration) { variableCount++; }
+				if (execution.type == ExecutionResult::Type::Return) { break; }
 			}
 			env.popVariables(variableCount);
 			variableCount = 0; // reset variableCount for later calls
@@ -216,27 +217,32 @@ public:
 		~VariableDeclarationNode() { }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			if (initializerExpression)
+			int initialValue = 0;
+			ExecutionResult execution;
+			if (initializerExpression) { execution = initializerExpression->execute(env); initialValue = execution.value; }
+			switch (type)
 			{
-				ExecutionResult execution = initializerExpression->execute(env);
-				switch (type)
-				{
-				case Type::VARIABLE: env.pushVariable(identifier, execution.value); break;
-				case Type::GLOBAL: env.pushGlobal(identifier, execution.value); break;
-				}
-			}
-			else
+			case Type::VARIABLE: env.pushVariable(identifier, initialValue); break;
+			case Type::GLOBAL: env.pushGlobal(identifier, initialValue); break;
+			case Type::INPUT: 
 			{
-				switch (type)
+				int n;
+				if (!(std::cin >> n))
 				{
-				case Type::VARIABLE: env.pushVariable(identifier, 0); break;
-				case Type::GLOBAL: env.pushGlobal(identifier, 0); break;
+					// invalid value, fall back to initialization
+					n = initialValue;
+					cin.clear();
+					cin.ignore(1);
 				}
+				cin.ignore(1);
+				env.pushVariable(identifier, n);
+				break;
 			}
-			if (type == Type::VARIABLE) return ExecutionResult(ExecutionResult::Type::VariableDeclaration);
-			else return ExecutionResult(ExecutionResult::Type::GlobalDeclaration);
+			}
+			if (type == Type::VARIABLE || type == Type::INPUT) return ExecutionResult(ExecutionResult::Type::VariableDeclaration, initialValue);
+			else return ExecutionResult(ExecutionResult::Type::GlobalDeclaration, initialValue);
 		}
-	};
+	};	
 
 	class PrintNode : public StatementNode
 	{
@@ -275,15 +281,15 @@ public:
 		}
 	};
 
-	class IfExpressionNode : public ExpressionNode
+	class StatementListExpressionNode : public ExpressionNode
 	{
 	public:
-		IfNode* ifNode;
-		IfExpressionNode(IfNode* n = nullptr) : ifNode(n) { }
-		~IfExpressionNode() { delete ifNode; }
+		StatementNode* statementList;
+		StatementListExpressionNode(StatementNode* n = nullptr) : statementList(n) { }
+		~StatementListExpressionNode() { delete statementList; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			return ifNode->execute(env);
+			return statementList->execute(env);
 		}
 	};
 
@@ -303,6 +309,10 @@ public:
 				execution = body->execute(env);
 				if (execution.type == ExecutionResult::Type::Break) { break; }
 				if (execution.type == ExecutionResult::Type::Continue) { continue; }
+				if (execution.type == ExecutionResult::Type::Return)
+				{
+					return execution;
+				}
 			}
 			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
@@ -324,6 +334,10 @@ public:
 				execution = body->execute(env);
 				if (execution.type == ExecutionResult::Type::Break) { break; }
 				if (execution.type == ExecutionResult::Type::Continue) { continue; }
+				if (execution.type == ExecutionResult::Type::Return)
+				{
+					return execution;
+				}
 			} while (condition->execute(env).value);
 			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
@@ -346,6 +360,11 @@ public:
 				ExecutionResult execution = body->execute(env);
 				if (execution.type == ExecutionResult::Type::Break) { break; }
 				if (execution.type == ExecutionResult::Type::Continue) { continue; }
+				if (execution.type == ExecutionResult::Type::Return) 
+				{ 
+					env.popVariables(1);
+					return execution;
+				}
 				update->execute(env);
 			}
 			if (initialization) env.popVariables(1); // pop the for loop's declaration variable
@@ -353,14 +372,50 @@ public:
 		}
 	};
 
-	class BreakNode : public StatementNode
+	class RepeatNode : public StatementNode
 	{
 	public:
-		BreakNode() = default;
-		~BreakNode() = default;
+		ExpressionNode* iterations;
+		StatementNode* body;
+		RepeatNode() : iterations(nullptr), body(nullptr) { }
+		~RepeatNode() { delete iterations; delete body; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			return ExecutionResult(ExecutionResult::Type::Break);
+			int iterationCount = iterations->execute(env).value;
+			if (iterationCount > 0)
+			{
+				for (int i = 0; i < iterationCount; i++)
+				{
+					ExecutionResult execution = body->execute(env);
+					if (execution.type == ExecutionResult::Type::Break) { break; }
+					if (execution.type == ExecutionResult::Type::Continue) { continue; }
+					if (execution.type == ExecutionResult::Type::Return)
+					{
+						return execution;
+					}
+				}
+			}
+			return ExecutionResult();
+		}
+	};
+
+	class JumpNode : public StatementNode
+	{
+	public:
+		enum class Type { BREAK, RETURN };
+		Type type;
+		ExpressionNode* expression;
+		JumpNode() : expression(nullptr) { };
+		~JumpNode() { };
+		virtual ExecutionResult execute(Environment& env) override
+		{
+			switch (type)
+			{
+			case Type::BREAK: return ExecutionResult(ExecutionResult::Type::Break);
+			case Type::RETURN:
+				if (expression) return ExecutionResult(ExecutionResult::Type::Return, expression->execute(env).value);
+				else return ExecutionResult(ExecutionResult::Type::Return);
+			}
 		}
 	};
 
@@ -378,9 +433,9 @@ public:
 	//	}
 	//};
 	
-	void execute(Environment& env) 
+	ExecutionResult execute(Environment& env) 
 	{
-		root->execute(env);
+		return root->execute(env);
 	}
 
 	StatementNode* root;

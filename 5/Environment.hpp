@@ -18,21 +18,25 @@ public:
 		Variable(const string& n, int v = 0) : identifier(n), value(v) { }
 	};
 
-	//class Function
-	//{
-	//public:
-	//	Environment* environment;
-	//	string identifier;
-	//	AST::Node* root;
+	class Function
+	{
+	public:
+		Environment* environment;
+		string identifier;
+		AST::Node* root;
 
-	//	Function(const string& i, AST::Node* n, Environment* e = nullptr) 
-	//		: identifier(i), root(n), environment(e) { }
-	//	~Function() { delete environment; }
-	//};
+		Function(const string& i, AST::Node* n, Environment* e = nullptr) 
+			: identifier(i), root(n), environment(e) { }
+		~Function() { delete environment; }
+		ExecutionResult execute()
+		{
+
+		}
+	};
 
 	DynamicList<Variable> variables;
 	DynamicList<Variable> globals;
-	//DynamicList<Function> functions;
+	DynamicList<Function> functions;
 
 	Environment() = default;
 	
@@ -63,7 +67,7 @@ public:
 			Variable& v = variables[i];
 			if (name.compare(v.identifier) == 0) return v.value;
 		}
-		throw runtime_error("\nRun error: Identifier \"" + name + "\" is undefined");
+		throw runtime_error("Run error: Identifier \"" + name + "\" is undefined");
 	}
 
 	void setValue(const string& name, int value)
@@ -77,7 +81,7 @@ public:
 			Variable& v = variables[i];
 			if (name.compare(v.identifier) == 0) { v.value = value; return; }
 		}
-		throw runtime_error("\nRun error: Identifier \"" + name + "\" is undefined");
+		throw runtime_error("Run error: Identifier \"" + name + "\" is undefined");
 	}
 
 	//void pushFunction(const string& name, AST::Node* root)

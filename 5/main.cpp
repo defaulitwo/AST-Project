@@ -27,7 +27,7 @@ int main()
             else
             {
                 input += line;
-                input += "\n";
+                input += '\n';
             }
             lineNumber++;
         }
@@ -45,12 +45,16 @@ int main()
         {
             Parser parser;
             AST tree = parser.Parse(tokenizer);
-            tree.execute(env);
-            cout << endl;
+            ExecutionResult execution = tree.execute(env);
+            if (execution.type == ExecutionResult::Type::Return)
+            {
+                cout << endl << "Program returned " << execution.value;
+            }
         }
         catch (runtime_error error)
         {
-            cout << error.what() << endl;
+            cout << endl << error.what();
         }
+        cout << endl;
     }
 }
