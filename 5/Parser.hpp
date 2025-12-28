@@ -48,15 +48,53 @@ private:
 	{
 		if (peek().type != type)
 		{
-			string error = "Unexpected token, expected " 
+			string error = "\nParse error: Unexpected token, expected "
 				+ Token::toString(type)
-			+", found " + Token::toString(peek().type);
+				+ ", found " + Token::toString(peek().type) + ", at line ";
+		/*		+ itoa(peek().lineNumber);*/
 			throw runtime_error(error);
 		}
 		else
 		{
 			return eat();
 		}
+	}
+
+	//AST::Node* parseFunctionDeclaration()
+	//{
+	//	AST::Node* returnNode;
+	//	if (peek().type == Token::Type::FUNC)
+	//	{
+	//		returnNode = new AST::FunctionDeclarationNode();
+	//		expect(Token::Type::FUNC);
+	//		string identifier = expect(Token::Type::IDENT).text;
+	//		expect(Token::Type::LPAREN);
+	//		if (peek().type != Token::Type::RPAREN)
+	//		{
+
+	//		}
+	//		else
+	//		{
+	//			expect(Token::Type::RPAREN);
+	//		}
+
+	//	}
+	//	else
+	//	{
+	//		returnNode = parseStatementList();
+	//	}
+	//	return returnNode;
+	//}
+
+	AST::StatementList* parseStatementList()
+	{
+		AST::StatementList* returnNode = new AST::StatementList();
+		while (peek().type != Token::Type::END && peek().type != Token::Type::RCURLY)
+		{
+			AST::StatementNode* statement = parseStatement();
+			if (statement) returnNode->statements.push(statement);
+		}
+		return returnNode;
 	}
 
 	AST::StatementNode* parseStatement()
@@ -87,13 +125,25 @@ private:
 		case Token::Type::FOR: // for loop
 			returnNode = parseFor();
 			break;
+		case Token::Type::DO: // do-while loop
+			returnNode = parseDoWhile();
+			break;
 		case Token::Type::BREAK: // break
 			returnNode = parseBreak();
 			break;
 		default: // expression statement ex: x = 10+3;
 			returnNode = new AST::ExpressionStatementNode(parseExpression());
-			expect(Token::Type::SEMICOLON);
+			if (peek().type == Token::Type::SEMICOLON) expect(Token::Type::SEMICOLON);
 		}
+		return returnNode;
+	}
+
+	AST::StatementList* parseBlock()
+	{
+		AST::StatementList* returnNode;
+		expect(Token::Type::LCURLY);
+		returnNode = parseStatementList();
+		expect(Token::Type::RCURLY);
 		return returnNode;
 	}
 
@@ -119,23 +169,6 @@ private:
 			returnNode->initializerExpression = parseExpression();
 		}
 		// note, semicolon not handled here
-		return returnNode;
-	}
-
-	AST::StatementList* parseBlock()
-	{
-		AST::StatementList* returnNode;
-		expect(Token::Type::LCURLY);
-		returnNode = parseStatementList();
-		expect(Token::Type::RCURLY);
-		return returnNode;
-	}
-
-	AST::StatementList* parseStatementList()
-	{
-		AST::StatementList* returnNode = new AST::StatementList();
-		while (peek().type != Token::Type::END && peek().type != Token::Type::RCURLY)
-			returnNode->statements.push(parseStatement());
 		return returnNode;
 	}
 
@@ -222,6 +255,16 @@ private:
 		returnNode->update = parseExpression();
 		if (expectingRParen) expect(Token::Type::RPAREN);
 		returnNode->body = parseStatement();
+		return returnNode;
+	}
+
+	AST::DoWhileNode* parseDoWhile()
+	{
+		AST::DoWhileNode* returnNode = new AST::DoWhileNode();
+		expect(Token::Type::DO);
+		returnNode->body = parseStatement();
+		expect(Token::Type::WHILE);
+		returnNode->condition = parseExpression();
 		return returnNode;
 	}
 
@@ -442,7 +485,7 @@ private:
 			break;
 		default:
 			throw runtime_error(
-				"Unexpected token in parsePrimary(), found " 
+				"\nParse error: Unexpected token in parsePrimary(), found " 
 				+ Token::toString(peek().type)
 			);
 		}

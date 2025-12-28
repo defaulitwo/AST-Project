@@ -81,7 +81,7 @@ public:
 		}
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			return ExecutionResult(ExecutionResult::Type::Return, getValue(env));
+			return ExecutionResult(ExecutionResult::Type::Normal, getValue(env));
 		}
 	};
 
@@ -121,12 +121,19 @@ public:
 		virtual ExecutionResult execute(Environment& env) override
 		{
 			ExecutionResult result;
+			int LOperandExecution;
+			int ROperandExecution;
 			switch (mode)
 			{
 			case Mode::ADD:	result.value = LOperand->execute(env).value + ROperand->execute(env).value; break;
 			case Mode::SUB:	result.value = LOperand->execute(env).value - ROperand->execute(env).value; break;
 			case Mode::MUL:	result.value = LOperand->execute(env).value * ROperand->execute(env).value; break;
-			case Mode::DIV:	result.value = LOperand->execute(env).value / ROperand->execute(env).value; break;
+			case Mode::DIV:
+				LOperandExecution = LOperand->execute(env).value;
+				ROperandExecution = ROperand->execute(env).value;
+				if (ROperandExecution == 0) throw runtime_error("Run error: Attempted to divide by zero");
+				result.value = LOperandExecution / ROperandExecution; 
+				break;
 			case Mode::MOD:	result.value = LOperand->execute(env).value % ROperand->execute(env).value; break;
 			case Mode::EQ:	result.value = LOperand->execute(env).value == ROperand->execute(env).value; break;
 			case Mode::NEQ:	result.value = LOperand->execute(env).value != ROperand->execute(env).value; break;
@@ -134,8 +141,16 @@ public:
 			case Mode::LT:	result.value = LOperand->execute(env).value < ROperand->execute(env).value; break;
 			case Mode::GTE:	result.value = LOperand->execute(env).value >= ROperand->execute(env).value; break;
 			case Mode::LTE:	result.value = LOperand->execute(env).value <= ROperand->execute(env).value; break;
-			case Mode::AND: result.value = LOperand->execute(env).value && ROperand->execute(env).value; break;
-			case Mode::OR:	result.value = LOperand->execute(env).value || ROperand->execute(env).value; break;
+			case Mode::AND:	// AND, OR with short-circuiting
+				if (!(LOperand->execute(env).value)) result.value = 0;
+				else if (!(ROperand->execute(env).value)) result.value = 0;
+				else result.value = 1;
+				break;
+			case Mode::OR:
+				if (LOperand->execute(env).value) result.value = 1;
+				else if (ROperand->execute(env).value) result.value = 1;
+				else result.value = 0;
+				break;
 			case Mode::ASS: 
 				result = ROperand->execute(env);
 				((IdentifierNode*)LOperand)->setValue(env, result.value);
@@ -193,7 +208,7 @@ public:
 	class VariableDeclarationNode : public StatementNode
 	{
 	public:
-		enum class Type { VARIABLE, GLOBAL };
+		enum class Type { VARIABLE, GLOBAL, INPUT };
 		string identifier;
 		ExpressionNode* initializerExpression;
 		Type type;
@@ -282,13 +297,35 @@ public:
 		~WhileNode() { delete condition; delete body; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
+			ExecutionResult execution;
 			while (condition->execute(env).value)
 			{
-				ExecutionResult execution = body->execute(env);
+				execution = body->execute(env);
 				if (execution.type == ExecutionResult::Type::Break) { break; }
 				if (execution.type == ExecutionResult::Type::Continue) { continue; }
 			}
-			return ExecutionResult();
+			return ExecutionResult(ExecutionResult::Type::Normal);
+		}
+	};
+
+	class DoWhileNode : public StatementNode
+	{
+	public:
+		ExpressionNode* condition;
+		StatementNode* body;
+
+		DoWhileNode() : condition(nullptr), body(nullptr) {}
+		~DoWhileNode() { delete condition; delete body; }
+		virtual ExecutionResult execute(Environment& env) override
+		{
+			ExecutionResult execution;
+			do
+			{
+				execution = body->execute(env);
+				if (execution.type == ExecutionResult::Type::Break) { break; }
+				if (execution.type == ExecutionResult::Type::Continue) { continue; }
+			} while (condition->execute(env).value);
+			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
 	};
 
@@ -303,7 +340,7 @@ public:
 		~ForNode() { delete initialization; delete condition; delete update; delete body; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			initialization->execute(env);
+			if (initialization) initialization->execute(env);
 			while (condition->execute(env).value)
 			{
 				ExecutionResult execution = body->execute(env);
@@ -311,7 +348,7 @@ public:
 				if (execution.type == ExecutionResult::Type::Continue) { continue; }
 				update->execute(env);
 			}
-			env.popVariables(1); // pop the for loop's variable
+			if (initialization) env.popVariables(1); // pop the for loop's declaration variable
 			return ExecutionResult();
 		}
 	};
@@ -326,6 +363,20 @@ public:
 			return ExecutionResult(ExecutionResult::Type::Break);
 		}
 	};
+
+	//class FunctionDeclarationNode : public Node
+	//{
+	//public:
+	//	FunctionDeclarationNode() { }
+	//	~FunctionDeclarationNode() { }
+	//	string identifier;
+	//	int parameterCount;
+	//	ExpressionStatementNode* body;
+	//	virtual ExecutionResult execute(Environment& env) override
+	//	{
+	//		env.pushFunction("", nullptr);
+	//	}
+	//};
 	
 	void execute(Environment& env) 
 	{

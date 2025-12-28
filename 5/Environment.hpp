@@ -18,15 +18,21 @@ public:
 		Variable(const string& n, int v = 0) : identifier(n), value(v) { }
 	};
 
-	class Function
-	{
-	public:
-		string identifier;
-		//AST root;
-	};
+	//class Function
+	//{
+	//public:
+	//	Environment* environment;
+	//	string identifier;
+	//	AST::Node* root;
+
+	//	Function(const string& i, AST::Node* n, Environment* e = nullptr) 
+	//		: identifier(i), root(n), environment(e) { }
+	//	~Function() { delete environment; }
+	//};
 
 	DynamicList<Variable> variables;
 	DynamicList<Variable> globals;
+	//DynamicList<Function> functions;
 
 	Environment() = default;
 	
@@ -37,6 +43,7 @@ public:
 
 	void pushGlobal(const string& ident, int initialValue)
 	{
+		for (Variable& v : globals) if (ident == v.identifier) return; // can't define a global with same name more than once
 		globals.push(Variable(ident, initialValue));
 	}
 
@@ -56,7 +63,7 @@ public:
 			Variable& v = variables[i];
 			if (name.compare(v.identifier) == 0) return v.value;
 		}
-		return 0;
+		throw runtime_error("\nRun error: Identifier \"" + name + "\" is undefined");
 	}
 
 	void setValue(const string& name, int value)
@@ -70,6 +77,12 @@ public:
 			Variable& v = variables[i];
 			if (name.compare(v.identifier) == 0) { v.value = value; return; }
 		}
+		throw runtime_error("\nRun error: Identifier \"" + name + "\" is undefined");
 	}
+
+	//void pushFunction(const string& name, AST::Node* root)
+	//{
+	//	functions.push(Function(name, root, new Environment()));
+	//}
 };
 

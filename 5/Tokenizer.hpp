@@ -15,7 +15,7 @@ public:
 	{
 	public:
 		enum class Type { 
-			VAR, GLOBAL,
+			VAR, GLOBAL, INPUT,
 			EQUAL, GREATER, LESS, GREATEREQUAL, LESSEQUAL,
 			AND, OR, NOT,
 			PLUS, MINUS, 
@@ -24,10 +24,11 @@ public:
 			LPAREN, RPAREN, LCURLY, RCURLY,
 			NUM, CHAR, IDENT, TRUE, FALSE,
 			SEMICOLON, COMMA,
-			IF, ELSE, WHILE, FOR,
+			IF, ELSE, WHILE, FOR, DO,
 			PRINT, PRINTLN, PRINTCHAR,
 			RANDOM,
 			BREAK, CONTINUE,
+			FUNC,
 			ERROR, END,
 		};
 
@@ -35,6 +36,7 @@ public:
 		int value;
 		string text;
 		char character;
+		int lineNumber;
 	
 		Token() { }; // default constructor, allows creating an uninitialized array of Token
 
@@ -44,27 +46,49 @@ public:
 		{
 			switch (type)
 			{
-			case Type::VAR:			return "VAR";
-			case Type::GLOBAL:		return "GLOBAL";
-			case Type::PLUS:		return "PLUS";
-			case Type::MINUS:		return "MINUS";
-			case Type::STAR:		return "STAR";
-			case Type::SLASH:		return "SLASH";
-			case Type::MOD:			return "MOD";
-			case Type::LPAREN:		return "LPAREN";
-			case Type::RPAREN:		return "RPAREN";
-			case Type::LCURLY:		return "LCURLY";
-			case Type::RCURLY:		return "RCURLY";
-			case Type::NUM:			return "NUMBER";
-			case Type::CHAR:		return "CHAR";
-			case Type::IDENT:		return "IDENTIFIER";
-			case Type::EQUAL:		return "EQUAL";
-			case Type::END:			return "END";
-			case Type::IF:			return "IF";
-			case Type::SEMICOLON:	return "SEMICOLON";
-			case Type::PRINT:		return "PRINT";
-			case Type::PRINTLN:		return "PRINTLN";
-			case Type::PRINTCHAR:	return "PRINTCHAR";
+			case Type::VAR:				return "VAR";
+			case Type::GLOBAL:			return "GLOBAL";
+			case Type::INPUT:			return "INPUT";
+			case Type::EQUAL:			return "EQUAL";
+			case Type::GREATER:			return "GREATER";
+			case Type::LESS:			return "LESS";
+			case Type::GREATEREQUAL:	return "GREATEREQUAL";
+			case Type::LESSEQUAL:		return "LESSEQUAL";
+			case Type::AND:				return "AND";
+			case Type::OR:				return "OR";
+			case Type::NOT:				return "NOT";
+			case Type::PLUS:			return "PLUS";
+			case Type::MINUS:			return "MINUS";
+			case Type::STAR:			return "STAR";
+			case Type::SLASH:			return "SLASH";
+			case Type::MOD:				return "MOD";
+			case Type::PLUSPLUS:		return "PLUSPLUS";
+			case Type::MINUSMINUS:		return "MINUSMINUS";
+			case Type::EQUALEQUAL:		return "EQUALEQUAL";
+			case Type::NOTEQUAL:		return "NOTEQUAL";
+			case Type::LPAREN:			return "LPAREN";
+			case Type::RPAREN:			return "RPAREN";
+			case Type::LCURLY:			return "LCURLY";
+			case Type::RCURLY:			return "RCURLY";
+			case Type::NUM:				return "NUMBER";
+			case Type::CHAR:			return "CHAR";
+			case Type::IDENT:			return "IDENTIFIER";
+			case Type::TRUE:			return "TRUE";
+			case Type::FALSE:			return "FALSE";
+			case Type::SEMICOLON:		return "SEMICOLON";
+			case Type::COMMA:			return "COMMA";
+			case Type::IF:				return "IF";
+			case Type::ELSE:			return "ELSE";
+			case Type::WHILE:			return "WHILE";
+			case Type::FOR:				return "FOR";
+			case Type::PRINT:			return "PRINT";
+			case Type::PRINTLN:			return "PRINTLN";
+			case Type::PRINTCHAR:		return "PRINTCHAR";
+			case Type::RANDOM:			return "RANDOM";
+			case Type::BREAK:			return "BREAK";
+			case Type::CONTINUE:		return "CONTINUE";
+			case Type::ERROR:			return "ERROR";
+			case Type::END:				return "END";
 			}
 			return "UNDEFINED";
 		}
@@ -86,8 +110,10 @@ public:
 	Tokenizer(const string& inputString) 
 	{
 		int i = 0;
+		int lineNumber = 0;
 		while (i < inputString.size())
 		{
+			if (inputString[i] == '\n') lineNumber++;
 			if (isspace(inputString[i])) { i++; continue; }
 			if (isdigit(inputString[i]))
 			{
@@ -113,12 +139,14 @@ public:
 				else if (textString.compare("random") == 0)		tokenList.push(Token(Token::Type::RANDOM));
 				else if (textString.compare("var") == 0)		tokenList.push(Token(Token::Type::VAR));
 				else if (textString.compare("global") == 0)		tokenList.push(Token(Token::Type::GLOBAL));
+				else if (textString.compare("input") == 0)		tokenList.push(Token(Token::Type::INPUT));
 				else if (textString.compare("true") == 0)		tokenList.push(Token(Token::Type::TRUE));
 				else if (textString.compare("false") == 0)		tokenList.push(Token(Token::Type::FALSE));
 				else if (textString.compare("if") == 0)			tokenList.push(Token(Token::Type::IF, 0, textString));
 				else if (textString.compare("else") == 0)		tokenList.push(Token(Token::Type::ELSE, 0, textString));
 				else if (textString.compare("while") == 0)		tokenList.push(Token(Token::Type::WHILE, 0, textString));
 				else if (textString.compare("for") == 0)		tokenList.push(Token(Token::Type::FOR, 0, textString));
+				else if (textString.compare("do") == 0)			tokenList.push(Token(Token::Type::DO, 0, textString));
 				else if (textString.compare("break") == 0)		tokenList.push(Token(Token::Type::BREAK, 0, textString));
 				else if (textString.compare("and") == 0)		tokenList.push(Token(Token::Type::AND));
 				else if (textString.compare("or") == 0)			tokenList.push(Token(Token::Type::OR));
@@ -127,7 +155,6 @@ public:
 			}
 			else 
 			{
-				bool canLookAhead = (i + 1) < tokenList.size();
 				switch (inputString[i])
 				{
 				case '+': 

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include "Tokenizer.hpp"
 #include "Parser.hpp"
 #include "AST.hpp"
@@ -15,9 +16,10 @@ int main()
     {
         // getting input string from user
         string input;
+        int lineNumber = 0;
         while(true)
         {
-            cout << "> ";
+            cout << internal << setw(5) << lineNumber << setw(3) << "| ";
             string line;
             getline(cin, line);
             if (line.compare("run") == 0) break;
@@ -27,6 +29,7 @@ int main()
                 input += line;
                 input += "\n";
             }
+            lineNumber++;
         }
 
         //cout << input;
@@ -47,7 +50,7 @@ int main()
         }
         catch (runtime_error error)
         {
-            cout << "Error parsing: " << error.what() << endl;
+            cout << error.what() << endl;
         }
     }
 }
