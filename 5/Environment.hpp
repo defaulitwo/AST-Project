@@ -1,8 +1,9 @@
 #pragma once
 #include <string>
 #include <iostream>
-#include "DynamicList.hpp"
 #include "AST.hpp"
+#include "DynamicList.hpp"
+
 using namespace std;
 
 class Environment
@@ -13,7 +14,6 @@ public:
 	public:
 		string identifier;
 		int value;
-		// note, do not allow nameless variables in constructor, by design
 		Variable() = default;
 		Variable(const string& n, int v = 0) : identifier(n), value(v) { }
 	};
@@ -21,17 +21,12 @@ public:
 	class Function
 	{
 	public:
-		Environment* environment;
 		string identifier;
-		AST::Node* root;
-
-		Function(const string& i, AST::Node* n, Environment* e = nullptr) 
-			: identifier(i), root(n), environment(e) { }
-		~Function() { delete environment; }
-		ExecutionResult execute()
-		{
-
-		}
+		DynamicList<string> parameters;
+		Function() = default;
+		Function(const string& i, DynamicList<string>& p)
+			: identifier(i), parameters(p) { }
+		~Function() { }
 	};
 
 	DynamicList<Variable> variables;
@@ -84,9 +79,22 @@ public:
 		throw runtime_error("Run error: Identifier \"" + name + "\" is undefined");
 	}
 
-	//void pushFunction(const string& name, AST::Node* root)
-	//{
-	//	functions.push(Function(name, root, new Environment()));
-	//}
+	void pushFunction(const string& name, DynamicList<string>& parameters)
+	{
+		for (Function& f : functions) if (name.compare(f.identifier) == 0 && f.parameters.size() == parameters.size()) throw runtime_error("test");
+		functions.push(Function(name, parameters));
+	}
+
+	Function& getFunction(const string& name, DynamicList<int>& arguments)
+	{
+		for (Function& f : functions)
+		{
+			if (f.identifier.compare(name) == 0 && f.parameters.size() == arguments.size())
+			{
+				return f;
+			}
+		}
+		throw runtime_error("Run error: Invalid function call \"" + name + "(...)\"");
+	}
 };
 

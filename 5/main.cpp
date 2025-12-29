@@ -6,7 +6,7 @@
 #include "Environment.hpp"
 using namespace std;
 
-int main()
+int main(int argc, char* argv[])
 {
     srand(time(0));
     Environment env;

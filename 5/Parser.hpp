@@ -24,7 +24,7 @@ public:
 	{
 		tokenList = inputTokenizer.tokenList;
 		AST resultTree;
-		resultTree.root = parseStatementList();
+		resultTree.root = parseCodeSnippet();
 		return resultTree;
 	}
 
@@ -36,15 +36,14 @@ private:
 		return tokenList[tokenIndex + n];
 	}
 
-	Token eat()
+	Token eat() // consumes a token
 	{
 		Token returnToken = peek();
-		if (tokenList[tokenIndex].type != Token::Type::END) tokenIndex++;
-		else throw runtime_error("Reached end of token list");
+		if (returnToken.type != Token::Type::ERROR) tokenIndex++;
 		return returnToken;
 	}
 
-	Token expect(Token::Type type)
+	Token expect(Token::Type type) // special version of eat() that asserts a certain token type
 	{
 		if (peek().type != type)
 		{
@@ -60,33 +59,36 @@ private:
 		}
 	}
 
-	//AST::Node* parseFunctionDeclaration()
-	//{
-	//	AST::Node* returnNode;
-	//	if (peek().type == Token::Type::FUNC)
-	//	{
-	//		returnNode = new AST::FunctionDeclarationNode();
-	//		expect(Token::Type::FUNC);
-	//		string identifier = expect(Token::Type::IDENT).text;
-	//		expect(Token::Type::LPAREN);
-	//		if (peek().type != Token::Type::RPAREN)
-	//		{
+	AST::Node* parseCodeSnippet()
+	{
+		if (peek().type == Token::Type::FUNC) return parseFunctionDeclaration();
+		else return parseStatementList();
+	}
 
-	//		}
-	//		else
-	//		{
-	//			expect(Token::Type::RPAREN);
-	//		}
+	AST::FunctionDeclarationNode* parseFunctionDeclaration()
+	{
+		AST::FunctionDeclarationNode* returnNode = new AST::FunctionDeclarationNode();
+		expect(Token::Type::FUNC);
+		returnNode->identifier = expect(Token::Type::IDENT).text;
+		expect(Token::Type::LPAREN);
+		if (peek().type != Token::Type::RPAREN)
+		{
+			while (peek().type != Token::Type::RPAREN)
+			{
+				returnNode->parameters.push(expect(Token::Type::IDENT).text);
+				if (peek().type != Token::Type::RPAREN) expect(Token::Type::COMMA);
+			}
+			expect(Token::Type::RPAREN);
+		}
+		else
+		{
+			expect(Token::Type::RPAREN);
+		}
+		returnNode->body = parseBlock();
+		return returnNode;
+	}
 
-	//	}
-	//	else
-	//	{
-	//		returnNode = parseStatementList();
-	//	}
-	//	return returnNode;
-	//}
-
-	AST::StatementList* parseStatementList()
+	AST::StatementList* parseStatementList() // statement list
 	{
 		AST::StatementList* returnNode = new AST::StatementList();
 		while (peek().type != Token::Type::END && peek().type != Token::Type::RCURLY)
@@ -97,13 +99,13 @@ private:
 		return returnNode;
 	}
 
-	AST::StatementNode* parseStatement()
+	AST::StatementNode* parseStatement() // statement
 	{
 		AST::StatementNode* returnNode;
 		switch (peek().type)
 		{
-		case Token::Type::INPUT:
-		case Token::Type::GLOBAL: // variable declarations
+		case Token::Type::INPUT: // variable declarations
+		case Token::Type::GLOBAL:
 		case Token::Type::VAR: 
 			returnNode = parseVariableDeclaration();
 			// handling consuming semicolon here to allow variable declaration in for loop
@@ -126,14 +128,14 @@ private:
 		case Token::Type::FOR: // for loop
 			returnNode = parseFor();
 			break;
-		case Token::Type::REPEAT: // for loop
+		case Token::Type::REPEAT: // repeat
 			returnNode = parseRepeat();
 			break;
 		case Token::Type::DO: // do-while loop
 			returnNode = parseDoWhile();
 			break;
-		case Token::Type::RETURN:
-		case Token::Type::BREAK: // break
+		case Token::Type::RETURN: // jump statements
+		case Token::Type::BREAK:
 			returnNode = parseJumpStatement();
 			break;
 		default: // expression statement ex: x = 10+3;
@@ -144,7 +146,7 @@ private:
 		return returnNode;
 	}
 
-	AST::StatementList* parseBlock()
+	AST::StatementList* parseBlock() // block { ... }
 	{
 		AST::StatementList* returnNode;
 		expect(Token::Type::LCURLY);
@@ -153,7 +155,7 @@ private:
 		return returnNode;
 	}
 
-	AST::VariableDeclarationNode* parseVariableDeclaration()
+	AST::VariableDeclarationNode* parseVariableDeclaration() // variable declarations
 	{
 		AST::VariableDeclarationNode* returnNode;
 		returnNode = new AST::VariableDeclarationNode();
@@ -161,16 +163,13 @@ private:
 		eat();
 		switch (declaration.type)
 		{
-		case Token::Type::VAR:
-			//expect(Token::Type::VAR);
+		case Token::Type::VAR: // local scope variable
 			returnNode->type = AST::VariableDeclarationNode::Type::VARIABLE;
 			break;
-		case Token::Type::GLOBAL:
-			//expect(Token::Type::GLOBAL);
+		case Token::Type::GLOBAL: // global variable
 			returnNode->type = AST::VariableDeclarationNode::Type::GLOBAL;
 			break;
-		case Token::Type::INPUT:
-			//expect(Token::Type::INPUT);
+		case Token::Type::INPUT: // input variable
 			returnNode->type = AST::VariableDeclarationNode::Type::INPUT;
 			break;
 		}
@@ -184,21 +183,21 @@ private:
 		return returnNode;
 	}
 
-	AST::PrintNode* parsePrint()
+	AST::PrintNode* parsePrint() // print statements
 	{
 		AST::PrintNode* returnNode;
 		returnNode = new AST::PrintNode();
 		switch (peek().type)
 		{
-		case Token::Type::PRINT:
+		case Token::Type::PRINT: // print, outputs value of expression evaluation
 			expect(Token::Type::PRINT);
 			returnNode->type = AST::PrintNode::Type::PRINTEXPR;
 			break;
-		case Token::Type::PRINTLN:
-			expect(Token::Type::PRINTLN);
+		case Token::Type::PRINTLN: // print line, like print but prints a newline afterwards
+			expect(Token::Type::PRINTLN); 
 			returnNode->type = AST::PrintNode::Type::PRINTLN;
 			break;
-		case Token::Type::PRINTCHAR:
+		case Token::Type::PRINTCHAR: // printchar, prints the character whose ascii code is the expression evaluation
 			expect(Token::Type::PRINTCHAR);
 			returnNode->type = AST::PrintNode::Type::PRINTCHAR;
 			break;
@@ -211,23 +210,13 @@ private:
 		return returnNode;
 	}
 
-	AST::IfNode* parseIf()
+	AST::IfNode* parseIf() // if statements
 	{
-		expect(Token::Type::IF);
 		AST::IfNode* returnNode = new AST::IfNode();
-		if (peek().type == Token::Type::LPAREN)
-		{
-			expect(Token::Type::LPAREN);
-			returnNode->condition = parseExpression();
-			expect(Token::Type::RPAREN);
-			returnNode->body = parseStatement();
-		}
-		else
-		{
-			returnNode->condition = parseExpression();
-			returnNode->body = parseStatement();
-		}
-		if (peek().type == Token::Type::ELSE)
+		expect(Token::Type::IF);
+		returnNode->condition = parseExpression(); // condition
+		returnNode->body = parseStatement(); // body
+		if (peek().type == Token::Type::ELSE) // else is optional
 		{
 			expect(Token::Type::ELSE);
 			returnNode->elseBody = parseStatement();
@@ -235,51 +224,41 @@ private:
 		return returnNode;
 	}
 
-	AST::WhileNode* parseWhile()
+	AST::WhileNode* parseWhile() // while loop statement
 	{
 		AST::WhileNode* returnNode = new AST::WhileNode();
 		expect(Token::Type::WHILE);
-		if (peek().type == Token::Type::LPAREN)
-		{
-			expect(Token::Type::LPAREN);
-			returnNode->condition = parseExpression();
-			expect(Token::Type::RPAREN);
-			returnNode->body = parseStatement();
-		}
-		else
-		{
-			returnNode->condition = parseExpression();
-			returnNode->body = parseStatement();
-		}
+		returnNode->condition = parseExpression(); // condition
+		returnNode->body = parseStatement(); // body
 		return returnNode;
 	}
 
-	AST::ForNode* parseFor()
+	AST::ForNode* parseFor() // for loop statement
 	{
 		AST::ForNode* returnNode = new AST::ForNode();
 		expect(Token::Type::FOR);
 		bool expectingRParen = false;
 		if (peek().type == Token::Type::LPAREN) { expectingRParen = true; expect(Token::Type::LPAREN); }
-		returnNode->initialization = parseVariableDeclaration();
+		returnNode->initialization = parseVariableDeclaration(); // initialization
 		expect(Token::Type::COMMA);
-		returnNode->condition = parseExpression();
+		returnNode->condition = parseExpression(); // condition
 		expect(Token::Type::COMMA);
-		returnNode->update = parseExpression();
+		returnNode->update = parseExpression(); // update
 		if (expectingRParen) expect(Token::Type::RPAREN);
-		returnNode->body = parseStatement();
+		returnNode->body = parseStatement(); // body
 		return returnNode;
 	}
 
-	AST::RepeatNode* parseRepeat()
+	AST::RepeatNode* parseRepeat() // repeat statement ex: repeat 5 println 10;
 	{
 		AST::RepeatNode* returnNode = new AST::RepeatNode();
 		expect(Token::Type::REPEAT);
-		returnNode->iterations = parseExpression();
-		returnNode->body = parseStatement();
+		returnNode->iterations = parseExpression(); // iterations
+		returnNode->body = parseStatement(); // body
 		return returnNode;
 	}
 
-	AST::DoWhileNode* parseDoWhile()
+	AST::DoWhileNode* parseDoWhile() // do-while loop statement
 	{
 		AST::DoWhileNode* returnNode = new AST::DoWhileNode();
 		expect(Token::Type::DO);
@@ -289,16 +268,16 @@ private:
 		return returnNode;
 	}
 
-	AST::JumpNode* parseJumpStatement()
+	AST::JumpNode* parseJumpStatement() // jump statements, ex: break, return...
 	{
 		AST::JumpNode* returnNode = new AST::JumpNode();
 		Token jump = eat();
 		switch (jump.type)
 		{
-		case Token::Type::BREAK:
+		case Token::Type::BREAK: // break, keeps exiting scopes until program exits or encounters a loop
 			returnNode->type = AST::JumpNode::Type::BREAK;
 			break;
-		case Token::Type::RETURN:
+		case Token::Type::RETURN: // like break, but doesnt stop at loops, and may return an expression's value
 			returnNode->type = AST::JumpNode::Type::RETURN;
 			if (peek().type != Token::Type::SEMICOLON) returnNode->expression = parseExpression();
 		}
@@ -306,23 +285,21 @@ private:
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parseExpression()
+	AST::ExpressionNode* parseExpression() // expressions
 	{
 		switch (peek().type)
 		{
-		case Token::Type::LCURLY: // if expression, ex: x = { if (y > x) 10 else 20 };
-			return new AST::StatementListExpressionNode(parseBlock());
 		default:
 			return parseAssignment();
 		}
 	}
 
-	AST::ExpressionNode* parseAssignment()
+	AST::ExpressionNode* parseAssignment() // assignment operators
 	{
 		if (peek().type == Token::Type::IDENT && peek(1).type == Token::Type::EQUAL)
 		{
 			Token identifierToken = expect(Token::Type::IDENT);
-			expect(Token::Type::EQUAL); // consume '='
+			expect(Token::Type::EQUAL);
 			AST::ExpressionNode* returnNode = new AST::BinaryOpNode(
 				AST::BinaryOpNode::Mode::ASS, 
 				new AST::IdentifierNode(identifierToken.text),
@@ -336,7 +313,7 @@ private:
 		}
 	}
 
-	AST::ExpressionNode* parseLogical()
+	AST::ExpressionNode* parseLogical() // logical AND, OR, NOT
 	{
 		AST::ExpressionNode* returnNode = parseEquality();
 		while (peek().type == Token::Type::AND || peek().type == Token::Type::OR)
@@ -355,18 +332,18 @@ private:
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parseEquality()
+	AST::ExpressionNode* parseEquality() // equality operators
 	{
 		AST::ExpressionNode* returnNode = parseComparison();
-		while (peek().type == Token::Type::EQUALEQUAL || peek().type == Token::Type::NOTEQUAL)
+		while (peek().type == Token::Type::EQUALITY || peek().type == Token::Type::NOTEQUALITY)
 		{
 			Token operation = eat();
 			switch (operation.type)
 			{
-			case Token::Type::EQUALEQUAL:
+			case Token::Type::EQUALITY:
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::EQ, returnNode, parseComparison());
 				break;
-			case Token::Type::NOTEQUAL:
+			case Token::Type::NOTEQUALITY:
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::NEQ, returnNode, parseComparison());
 				break;
 			}
@@ -374,7 +351,7 @@ private:
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parseComparison()
+	AST::ExpressionNode* parseComparison() // comparison operators
 	{
 		AST::ExpressionNode* returnNode = parseAdditive();
 		while (peek().type == Token::Type::LESS || peek().type == Token::Type::GREATER ||
@@ -400,7 +377,7 @@ private:
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parseAdditive()
+	AST::ExpressionNode* parseAdditive() // addition/subtraction
 	{
 		AST::ExpressionNode* returnNode = parseMultiplicative();
 		while (peek().type == Token::Type::PLUS || peek().type == Token::Type::MINUS)
@@ -419,7 +396,7 @@ private:
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parseMultiplicative()
+	AST::ExpressionNode* parseMultiplicative() // multiplication/division/mod
 	{
 		AST::ExpressionNode* returnNode = parseUnary();
 		while (peek().type == Token::Type::STAR || peek().type == Token::Type::SLASH || peek().type == Token::Type::MOD)
@@ -441,7 +418,7 @@ private:
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parseUnary()
+	AST::ExpressionNode* parseUnary() // unary operators
 	{
 		AST::ExpressionNode* returnNode;
 		string identifier;
@@ -455,16 +432,16 @@ private:
 			expect(Token::Type::NOT);
 			returnNode = new AST::UnaryOpNode(AST::UnaryOpNode::Mode::NOT, parseUnary());
 			break;
-		case Token::Type::PLUSPLUS:
-			expect(Token::Type::PLUSPLUS);
+		case Token::Type::INCREMENT:
+			expect(Token::Type::INCREMENT);
 			identifier = expect(Token::Type::IDENT).text;
 			returnNode = new AST::UnaryOpNode(
 				AST::UnaryOpNode::Mode::INC, 
 				new AST::IdentifierNode(identifier)
 			);
 			break;
-		case Token::Type::MINUSMINUS:
-			expect(Token::Type::MINUSMINUS);
+		case Token::Type::DECREMENT:
+			expect(Token::Type::DECREMENT);
 			identifier = expect(Token::Type::IDENT).text;
 			returnNode = new AST::UnaryOpNode(
 				AST::UnaryOpNode::Mode::DEC, 
@@ -477,7 +454,7 @@ private:
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parsePrimary()
+	AST::ExpressionNode* parsePrimary() // a primary expression, which can not be divided into more expressions
 	{
 		AST::ExpressionNode* returnNode;
 		// identifier and value are declared outside switch, but may not always be used
@@ -485,10 +462,6 @@ private:
 		int value;
 		switch (peek().type)
 		{
-		case Token::Type::IDENT:
-			identifier = expect(Token::Type::IDENT).text;
-			returnNode = new AST::IdentifierNode(identifier);
-			break;
 		case Token::Type::NUM:
 			value = expect(Token::Type::NUM).value;
 			returnNode = new AST::IntegerLiteralNode(value);
@@ -513,6 +486,25 @@ private:
 			expect(Token::Type::LPAREN);
 			returnNode = parseExpression();
 			expect(Token::Type::RPAREN);
+			break;
+		case Token::Type::LCURLY: // statementlist expression, ex: x = { if (y > x) 10 else 20 };
+			return new AST::StatementListExpressionNode(parseBlock());
+		case Token::Type::IDENT:
+			identifier = expect(Token::Type::IDENT).text;
+			if (peek().type == Token::Type::LPAREN)
+			{
+				AST::callNode* newNode = new AST::callNode();
+				newNode->identifier = identifier;
+				expect(Token::Type::LPAREN);
+				while (peek().type != Token::Type::RPAREN)
+				{
+					newNode->arguments.push(parseExpression());
+					if (peek().type != Token::Type::RPAREN) expect(Token::Type::COMMA);
+				}
+				expect(Token::Type::RPAREN);
+				returnNode = newNode;
+			}
+			else returnNode = new AST::IdentifierNode(identifier);
 			break;
 		default:
 			throw runtime_error(

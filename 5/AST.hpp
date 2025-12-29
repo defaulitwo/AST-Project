@@ -135,7 +135,12 @@ public:
 				if (ROperandExecution == 0) throw runtime_error("Run error: Attempted to divide by zero");
 				result.value = LOperandExecution / ROperandExecution; 
 				break;
-			case Mode::MOD:	result.value = LOperand->execute(env).value % ROperand->execute(env).value; break;
+			case Mode::MOD:
+				LOperandExecution = LOperand->execute(env).value;
+				ROperandExecution = ROperand->execute(env).value;
+				if (ROperandExecution == 0) throw runtime_error("Run error: Attempted to mod by zero");
+				result.value = LOperandExecution % ROperandExecution;
+				break;
 			case Mode::EQ:	result.value = LOperand->execute(env).value == ROperand->execute(env).value; break;
 			case Mode::NEQ:	result.value = LOperand->execute(env).value != ROperand->execute(env).value; break;
 			case Mode::GT:	result.value = LOperand->execute(env).value > ROperand->execute(env).value; break;
@@ -214,7 +219,7 @@ public:
 		ExpressionNode* initializerExpression;
 		Type type;
 		VariableDeclarationNode(const string& identifier = "", ExpressionNode* n = nullptr) : identifier(identifier), initializerExpression(n) {}
-		~VariableDeclarationNode() { }
+		~VariableDeclarationNode() { delete initializerExpression; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
 			int initialValue = 0;
@@ -362,7 +367,7 @@ public:
 				if (execution.type == ExecutionResult::Type::Continue) { continue; }
 				if (execution.type == ExecutionResult::Type::Return) 
 				{ 
-					env.popVariables(1);
+					env.popVariables(1); // pop the for loop's declaration variable
 					return execution;
 				}
 				update->execute(env);
@@ -406,7 +411,7 @@ public:
 		Type type;
 		ExpressionNode* expression;
 		JumpNode() : expression(nullptr) { };
-		~JumpNode() { };
+		~JumpNode() { delete expression; };
 		virtual ExecutionResult execute(Environment& env) override
 		{
 			switch (type)
@@ -419,26 +424,44 @@ public:
 		}
 	};
 
-	//class FunctionDeclarationNode : public Node
-	//{
-	//public:
-	//	FunctionDeclarationNode() { }
-	//	~FunctionDeclarationNode() { }
-	//	string identifier;
-	//	int parameterCount;
-	//	ExpressionStatementNode* body;
-	//	virtual ExecutionResult execute(Environment& env) override
-	//	{
-	//		env.pushFunction("", nullptr);
-	//	}
-	//};
+	class FunctionDeclarationNode : public Node
+	{
+	public:
+		string identifier;
+		DynamicList<string> parameters;
+		StatementList* body;
+		FunctionDeclarationNode() { }
+		~FunctionDeclarationNode() { }
+		virtual ExecutionResult execute(Environment& env) override
+		{
+			env.pushFunction(identifier, parameters);
+			return ExecutionResult(ExecutionResult::Type::Normal);
+		}
+		
+	};
+
+	class callNode : public ExpressionNode
+	{
+	public:
+		string identifier;
+		DynamicList<ExpressionNode*> arguments;
+		callNode() { }
+		~callNode() { for (ExpressionNode* n : arguments) delete n; }
+		virtual ExecutionResult execute(Environment& env) override
+		{
+			DynamicList<int> inputs;
+			for (ExpressionNode* n : arguments) inputs.push(n->execute(env).value);
+			Environment::Function& f = env.getFunction(identifier, inputs);
+			return ExecutionResult(ExecutionResult::Type::Normal);
+		}
+	};
 	
 	ExecutionResult execute(Environment& env) 
 	{
 		return root->execute(env);
 	}
 
-	StatementNode* root;
+	Node* root;
 	AST() : root(nullptr) { }
 };
 

@@ -20,7 +20,7 @@ public:
 			AND, OR, NOT,
 			PLUS, MINUS, 
 			STAR, SLASH, MOD, 
-			PLUSPLUS, MINUSMINUS, EQUALEQUAL, NOTEQUAL,
+			INCREMENT, DECREMENT, EQUALITY, NOTEQUALITY,
 			LPAREN, RPAREN, LCURLY, RCURLY,
 			NUM, CHAR, IDENT, TRUE, FALSE,
 			SEMICOLON, COMMA,
@@ -62,10 +62,10 @@ public:
 			case Type::STAR:			return "STAR";
 			case Type::SLASH:			return "SLASH";
 			case Type::MOD:				return "MOD";
-			case Type::PLUSPLUS:		return "PLUSPLUS";
-			case Type::MINUSMINUS:		return "MINUSMINUS";
-			case Type::EQUALEQUAL:		return "EQUALEQUAL";
-			case Type::NOTEQUAL:		return "NOTEQUAL";
+			case Type::INCREMENT:		return "INCREMENT";
+			case Type::DECREMENT:		return "DECREMENT";
+			case Type::EQUALITY:		return "EQUALITY";
+			case Type::NOTEQUALITY:		return "NOTEQUALITY";
 			case Type::LPAREN:			return "LPAREN";
 			case Type::RPAREN:			return "RPAREN";
 			case Type::LCURLY:			return "LCURLY";
@@ -91,6 +91,7 @@ public:
 			case Type::CONTINUE:		return "CONTINUE";
 			case Type::RETURN:			return "RETURN";
 			case Type::ERROR:			return "ERROR";
+			case Type::FUNC:			return "FUNC";
 			case Type::END:				return "END";
 			}
 			return "UNDEFINED";
@@ -163,6 +164,7 @@ public:
 				else if (textString.compare("and") == 0)		pushToken(Token(Token::Type::AND));
 				else if (textString.compare("or") == 0)			pushToken(Token(Token::Type::OR));
 				else if (textString.compare("not") == 0)		pushToken(Token(Token::Type::NOT));
+				else if (textString.compare("func") == 0)		pushToken(Token(Token::Type::FUNC));
 				// identifier
 				else											pushToken(Token(Token::Type::IDENT, 0, textString));
 			}
@@ -172,14 +174,14 @@ public:
 				{
 				case '+': 
 					if (inputString[i + 1] != '+') { pushToken(Token(Token::Type::PLUS)); i++; }
-					else { pushToken(Token(Token::Type::PLUSPLUS)); i += 2; }
+					else { pushToken(Token(Token::Type::INCREMENT)); i += 2; }
 					break;
 				case '-': 					
 					if (inputString[i + 1] != '-') { pushToken(Token(Token::Type::MINUS)); i++; }
-					else { pushToken(Token(Token::Type::MINUSMINUS)); i += 2; }
+					else { pushToken(Token(Token::Type::DECREMENT)); i += 2; }
 					break;
 				case '*': pushToken(Token(Token::Type::STAR));		i++; break;
-				case '/': pushToken(Token(Token::Type::SLASH));	i++; break;
+				case '/': pushToken(Token(Token::Type::SLASH));		i++; break;
 				case '%': pushToken(Token(Token::Type::MOD));		i++; break;
 				case '(': pushToken(Token(Token::Type::LPAREN));	i++; break;
 				case ')': pushToken(Token(Token::Type::RPAREN));	i++; break;
@@ -187,7 +189,7 @@ public:
 				case '}': pushToken(Token(Token::Type::RCURLY));	i++; break;
 				case '=': 
 					if (inputString[i + 1] != '=') { pushToken(Token(Token::Type::EQUAL)); i++; }
-					else { pushToken(Token(Token::Type::EQUALEQUAL)); i += 2; }
+					else { pushToken(Token(Token::Type::EQUALITY)); i += 2; }
 					break;
 				case '>':
 					if (inputString[i + 1] != '=') { pushToken(Token(Token::Type::GREATER)); i++; }
@@ -199,7 +201,7 @@ public:
 					break;
 				case '!': 
 					if (inputString[i + 1] != '=') { pushToken(Token(Token::Type::NOT)); i++; }
-					else { pushToken(Token(Token::Type::NOTEQUAL)); i += 2; }
+					else { pushToken(Token(Token::Type::NOTEQUALITY)); i += 2; }
 					break;
 				case '&': 
 					if (inputString[i + 1] != '&') { /*...*/ i++; }
@@ -211,10 +213,10 @@ public:
 					break;
 				case ';': pushToken(Token(Token::Type::SEMICOLON));	i++; break;
 				case ',': pushToken(Token(Token::Type::COMMA));		i++; break;
-				case '#':
+				case '#': // comments
 					while (i < inputString.size() && inputString[i] != '\n') i++; 
 					break;
-				case '\'':
+				case '\'': // character literal
 					i++;
 					pushToken(Token(Token::Type::CHAR, 0, "", inputString[i]));
 					i++;
