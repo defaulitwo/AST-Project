@@ -14,7 +14,8 @@ public:
 	class Token
 	{
 	public:
-		enum class Type { 
+		enum class Type 
+		{ 
 			VAR, GLOBAL, INPUT,
 			EQUAL, GREATER, LESS, GREATEREQUAL, LESSEQUAL,
 			AND, OR, NOT,

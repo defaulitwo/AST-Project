@@ -169,9 +169,11 @@ private:
 		case Token::Type::GLOBAL: // global variable
 			returnNode->type = AST::VariableDeclarationNode::Type::GLOBAL;
 			break;
-		case Token::Type::INPUT: // input variable
+		case Token::Type::INPUT: // input variable, also a local variable but user can give input
 			returnNode->type = AST::VariableDeclarationNode::Type::INPUT;
 			break;
+		default:
+			expect(Token::Type::VAR);
 		}
 		returnNode->identifier = expect(Token::Type::IDENT).text;
 		if (peek().type == Token::Type::EQUAL)
@@ -202,10 +204,7 @@ private:
 			returnNode->type = AST::PrintNode::Type::PRINTCHAR;
 			break;
 		}
-		if (peek().type != Token::Type::SEMICOLON)
-		{
-			returnNode->expression = parseExpression();
-		}
+		if (peek().type != Token::Type::SEMICOLON) returnNode->expression = parseExpression();
 		expect(Token::Type::SEMICOLON);
 		return returnNode;
 	}
@@ -240,9 +239,11 @@ private:
 		bool expectingRParen = false;
 		if (peek().type == Token::Type::LPAREN) { expectingRParen = true; expect(Token::Type::LPAREN); }
 		returnNode->initialization = parseVariableDeclaration(); // initialization
-		expect(Token::Type::COMMA);
+		if (peek().type == Token::Type::SEMICOLON) expect(Token::Type::SEMICOLON); // separator
+		else expect(Token::Type::COMMA);
 		returnNode->condition = parseExpression(); // condition
-		expect(Token::Type::COMMA);
+		if (peek().type == Token::Type::SEMICOLON) expect(Token::Type::SEMICOLON); // separator
+		else expect(Token::Type::COMMA);
 		returnNode->update = parseExpression(); // update
 		if (expectingRParen) expect(Token::Type::RPAREN);
 		returnNode->body = parseStatement(); // body
@@ -279,8 +280,8 @@ private:
 			break;
 		case Token::Type::RETURN: // like break, but doesnt stop at loops, and may return an expression's value
 			returnNode->type = AST::JumpNode::Type::RETURN;
-			if (peek().type != Token::Type::SEMICOLON) returnNode->expression = parseExpression();
 		}
+		if (peek().type != Token::Type::SEMICOLON) returnNode->expression = parseExpression();
 		expect(Token::Type::SEMICOLON);
 		return returnNode;
 	}

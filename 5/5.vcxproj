@@ -24,6 +24,7 @@
     <ProjectGuid>{940f370f-87e1-49c2-8cb5-a51846d516dd}</ProjectGuid>
     <RootNamespace>My5</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Interpreter</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
