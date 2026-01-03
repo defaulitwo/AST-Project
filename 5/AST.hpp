@@ -44,7 +44,6 @@ public:
 	class StatementList : public StatementNode
 	{
 	public:
-
 		DynamicList<StatementNode*> statements;
 		int variableCount;
 
@@ -227,9 +226,9 @@ public:
 			if (initializerExpression) { execution = initializerExpression->execute(env); initialValue = execution.value; }
 			switch (type)
 			{
-			case Type::VARIABLE: env.pushVariable(identifier, initialValue); break;
-			case Type::GLOBAL: env.pushGlobal(identifier, initialValue); break;
-			case Type::INPUT: 
+			case Type::VARIABLE: env.pushVariable(identifier, initialValue); break; // local variable
+			case Type::GLOBAL: env.pushGlobal(identifier, initialValue); break; // global variable
+			case Type::INPUT:  // input variable
 			{
 				int n;
 				if (!(std::cin >> n))
@@ -314,10 +313,7 @@ public:
 				execution = body->execute(env);
 				if (execution.type == ExecutionResult::Type::Break) { break; }
 				if (execution.type == ExecutionResult::Type::Continue) { continue; }
-				if (execution.type == ExecutionResult::Type::Return)
-				{
-					return execution;
-				}
+				if (execution.type == ExecutionResult::Type::Return) { return execution; }
 			}
 			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
@@ -367,13 +363,13 @@ public:
 				if (execution.type == ExecutionResult::Type::Continue) { continue; }
 				if (execution.type == ExecutionResult::Type::Return) 
 				{ 
-					env.popVariables(1); // pop the for loop's declaration variable
+					env.popVariables(1); // pop the for loop's initialization variable
 					return execution;
 				}
 				update->execute(env);
 			}
-			if (initialization) env.popVariables(1); // pop the for loop's declaration variable
-			return ExecutionResult();
+			if (initialization) env.popVariables(1); // pop the for loop's initialization variable
+			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
 	};
 
@@ -400,7 +396,7 @@ public:
 					}
 				}
 			}
-			return ExecutionResult();
+			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
 	};
 

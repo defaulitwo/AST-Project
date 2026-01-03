@@ -7,13 +7,18 @@
 #include "Environment.hpp"
 using namespace std;
 
+bool debug = false;
+
 void execute(const string& input, Environment& env)
 {
     // tokenizing the input string, generating the token list
     Tokenizer tokenizer(input);
-    //cout << "Tokenization result:" << endl;
-    //tokenizer.printTokensTo(cout);
-    //cout << endl;
+    if (debug)
+    {
+        cout << "Tokenization result:" << endl;
+        tokenizer.printTokensTo(cout);
+        cout << endl;
+    }
 
     // parsing the token list, building AST
     try
@@ -65,25 +70,18 @@ int main(int argc, char* argv[])
         DynamicList<string> pastLines;
         while (true)
         {
-            // getting input string from user
-
             int lineNumber = 0;
             while (true)
             {
                 cout << internal << setw(5) << lineNumber << setw(3) << "| ";
+                bool refresh = false; // print lines again to user, possibly after a change
                 string line;
                 getline(cin, line);
                 if (line.compare("run") == 0) break;
                 else if (line.compare("exit") == 0) exit(0);
                 else if (line.compare("help") == 0)
                 {
-
                     // !!! PLACEHOLDER, ADD HELP LATER !!!
-
-                    for (int i = 0; i < lines.size(); i++)
-                    {
-                        cout << internal << setw(5) << i << setw(3) << "| " << lines[i] << endl;
-                    }
                 }
                 else if (line.compare("back") == 0)
                 {
@@ -93,13 +91,9 @@ int main(int argc, char* argv[])
                         lineNumber--;
                     }
 
-                    cout << endl;
-                    for (int i = 0; i < lines.size(); i++)
-                    {
-                        cout << internal << setw(5) << i << setw(3) << "| " << lines[i] << endl;
-                    }
+                    refresh = true;
                 }
-                else if (line.compare("edit") == 0)
+                else if (line.compare("edit") == 0) // edit a previously entered line
                 {
                     int n;
                     cout << "which line? ";
@@ -107,47 +101,26 @@ int main(int argc, char* argv[])
                     cin.ignore();
                     if (n >= 0 && n < lines.size())
                     {
-                        cout << endl;
-                        for (int i = 0; i < n; i++)
-                        {
-                            cout << internal << setw(5) << i << setw(3) << "| " << lines[i] << endl;
-                        }
-                        cout << endl;
-                        int count = 1;
-                        for (int i = n + 1; i < lines.size(); i++)
-                        {
-                            count++;
-                            cout << internal << setw(5) << i << setw(3) << "| " << lines[i] << endl;
-                        }
-                        cout << "\033[" << count << "A";
+                        cout << "\033[" << lineNumber - n + 2 << "A";
+                        cout << "\033[2K\r";
                         cout << internal << setw(5) << n << setw(3) << "| ";
                         string newEdit;
                         getline(cin, newEdit);
                         if (!(newEdit.compare("cancel") == 0)) lines[n] = newEdit;
-                        cout << "\033[" << count << "B";
+                        cout << "\033[" << lineNumber - n + 1 << "B";
                     }
                     else
                     {
                         cout << "\033[31m" << "invalid line" << "\033[0m" << endl;
                     }
-
-                    cout << endl;
-                    for (int i = 0; i < lines.size(); i++)
-                    {
-                        cout << internal << setw(5) << i << setw(3) << "| " << lines[i] << endl;
-                    }
+                    refresh = true;
                 }
                 else if (line.compare("recall") == 0) // recall last executed code
                 {
                     while (!lines.empty()) lines.pop();
-                    lineNumber = 0;
                     lines = pastLines;
-                    cout << endl;
-                    for (int i = 0; i < lines.size(); i++)
-                    {
-                        cout << internal << setw(5) << i << setw(3) << "| " << lines[i] << endl;
-                        lineNumber++;
-                    }
+                    lineNumber = pastLines.size();
+                    refresh = true;
                 }
                 else if (line.compare("discard") == 0) // delete current snippet
                 {
@@ -155,10 +128,25 @@ int main(int argc, char* argv[])
                     lineNumber = 0;
                     cout << endl;
                 }
-                else
+                else if (line.compare("debug") == 0) // delete current snippet
+                {
+                    debug = !debug;
+                    refresh = true;
+                }
+                else // push new line
                 {
                     lines.push(line);
                     lineNumber++;
+                }
+
+                if (refresh)
+                {
+                    //cout << "\033[H\033[2J";
+                    cout << endl;
+                    for (int i = 0; i < lines.size(); i++)
+                    {
+                        cout << internal << setw(5) << i << setw(3) << "| " << lines[i] << endl;
+                    }
                 }
             }
             
@@ -171,8 +159,8 @@ int main(int argc, char* argv[])
 
             execute(input, env);
 
-            pastLines = lines;
-            while (!lines.empty()) lines.pop();
+            pastLines = lines; // save last execution to be able to be recalled
+            while (!lines.empty()) lines.pop(); // clear lines
         }
     }
 }

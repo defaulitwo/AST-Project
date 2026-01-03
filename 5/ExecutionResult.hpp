@@ -2,7 +2,8 @@
 class ExecutionResult
 {
 public:
-	enum class Type {
+	enum class Type 
+	{
 		Normal, Null, Return, Break, Continue, VariableDeclaration, GlobalDeclaration
 	};
 
