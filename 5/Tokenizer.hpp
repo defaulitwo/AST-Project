@@ -189,7 +189,7 @@ public:
 				case '(': pushToken(Token(Token::Type::LPAREN));	i++; break;
 				case ')': pushToken(Token(Token::Type::RPAREN));	i++; break;
 				case '{': pushToken(Token(Token::Type::LCURLY));	i++; break;
-				case '}': 	i++; break;
+				case '}': pushToken(Token(Token::Type::RCURLY));	i++; break;
 				case '=': 
 					if (inputString[i+1] != '=') { pushToken(Token(Token::Type::EQUAL)); i++; }
 					else { pushToken(Token(Token::Type::EQUALITY)); i += 2; }
