@@ -22,7 +22,7 @@ public:
 	public:
 		Node() = default;
 		virtual ~Node() = default;
-		virtual ExecutionResult execute(Environment& env)  = 0;
+		virtual ExecutionResult execute(Environment& env) = 0;
 	};
 
 	class StatementNode : public Node
@@ -110,7 +110,11 @@ public:
 	class BinaryOpNode : public ExpressionNode
 	{
 	public:
-		enum class Mode { ADD, SUB, MUL, DIV, MOD, ASS, AND, OR, EQ, NEQ, LT, GT, LTE, GTE };
+		enum class Mode 
+		{ 
+			ADD, SUB, MUL, DIV, MOD, ASS, AND, OR, EQ, NEQ, LT, GT, LTE, GTE, 
+			BITAND, BITOR, BITXOR, BITSHIFTL, BITSHIFTR
+		};
 
 		Mode mode;
 		ExpressionNode* LOperand;
@@ -132,7 +136,7 @@ public:
 				LOperandExecution = LOperand->execute(env).value;
 				ROperandExecution = ROperand->execute(env).value;
 				if (ROperandExecution == 0) throw runtime_error("Run error: Attempted to divide by zero");
-				result.value = LOperandExecution / ROperandExecution; 
+				result.value = LOperandExecution / ROperandExecution;
 				break;
 			case Mode::MOD:
 				LOperandExecution = LOperand->execute(env).value;
@@ -156,10 +160,15 @@ public:
 				else if (ROperand->execute(env).value) result.value = 1;
 				else result.value = 0;
 				break;
-			case Mode::ASS: 
+			case Mode::ASS:
 				result = ROperand->execute(env);
 				((IdentifierNode*)LOperand)->setValue(env, result.value);
 				break;
+			case Mode::BITAND:	result.value = LOperand->execute(env).value & ROperand->execute(env).value; break;
+			case Mode::BITOR:	result.value = LOperand->execute(env).value | ROperand->execute(env).value; break;
+			case Mode::BITXOR:	result.value = LOperand->execute(env).value ^ ROperand->execute(env).value; break;
+			case Mode::BITSHIFTL:	result.value = LOperand->execute(env).value << ROperand->execute(env).value; break;
+			case Mode::BITSHIFTR:	result.value = LOperand->execute(env).value >> ROperand->execute(env).value; break;
 			}
 			return result;
 		}
@@ -168,7 +177,7 @@ public:
 	class UnaryOpNode : public ExpressionNode
 	{
 	public:
-		enum class Mode { NEG, NOT, INC, DEC };
+		enum class Mode { NEG, NOT, INC, DEC, BITNOT };
 
 		Mode mode;
 		ExpressionNode* operand;
@@ -193,6 +202,7 @@ public:
 				env.setValue(identifier, env.getValue(identifier) - 1);
 				result.value = env.getValue(identifier);
 				break;
+			case Mode::BITNOT: result.value = ~(operand->execute(env).value); break;
 			}
 			return result;
 		}

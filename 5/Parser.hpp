@@ -316,17 +316,40 @@ private:
 
 	AST::ExpressionNode* parseLogical() // logical AND, OR, NOT
 	{
-		AST::ExpressionNode* returnNode = parseEquality();
+		AST::ExpressionNode* returnNode = parseBitwiseLogical();
 		while (peek().type == Token::Type::AND || peek().type == Token::Type::OR)
 		{
 			Token operation = eat();
 			switch (operation.type)
 			{
 			case Token::Type::AND:
-				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::AND, returnNode, parseEquality());
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::AND, returnNode, parseBitwiseLogical());
 				break;
 			case Token::Type::OR:
-				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::OR, returnNode, parseEquality());
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::OR, returnNode, parseBitwiseLogical());
+				break;
+			}
+		}
+		return returnNode;
+	}
+
+	AST::ExpressionNode* parseBitwiseLogical()
+	{
+		AST::ExpressionNode* returnNode = parseEquality();
+		while (peek().type == Token::Type::BITAND || peek().type == Token::Type::BITOR
+			|| peek().type == Token::Type::BITXOR)
+		{
+			Token operation = eat();
+			switch (operation.type)
+			{
+			case Token::Type::BITAND:
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::BITAND, returnNode, parseEquality());
+				break;
+			case Token::Type::BITOR:
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::BITOR, returnNode, parseEquality());
+				break;
+			case Token::Type::BITXOR:
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::BITXOR, returnNode, parseEquality());
 				break;
 			}
 		}
@@ -354,7 +377,7 @@ private:
 
 	AST::ExpressionNode* parseComparison() // comparison operators
 	{
-		AST::ExpressionNode* returnNode = parseAdditive();
+		AST::ExpressionNode* returnNode = parseBitwiseShift();
 		while (peek().type == Token::Type::LESS || peek().type == Token::Type::GREATER ||
 				peek().type == Token::Type::LESSEQUAL || peek().type == Token::Type::GREATEREQUAL)
 		{
@@ -362,16 +385,35 @@ private:
 			switch (operation.type)
 			{
 			case Token::Type::GREATER:
-				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::GT, returnNode, parseAdditive());
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::GT, returnNode, parseBitwiseShift());
 				break;
 			case Token::Type::LESS:
-				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::LT, returnNode, parseAdditive());
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::LT, returnNode, parseBitwiseShift());
 				break;
 			case Token::Type::GREATEREQUAL:
-				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::GTE, returnNode, parseAdditive());
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::GTE, returnNode, parseBitwiseShift());
 				break;
 			case Token::Type::LESSEQUAL:
-				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::LTE, returnNode, parseAdditive());
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::LTE, returnNode, parseBitwiseShift());
+				break;
+			}
+		}
+		return returnNode;
+	}
+
+	AST::ExpressionNode* parseBitwiseShift()
+	{
+		AST::ExpressionNode* returnNode = parseAdditive();
+		while (peek().type == Token::Type::BITSHIFTLEFT || peek().type == Token::Type::BITSHIFTRIGHT)
+		{
+			Token operation = eat();
+			switch (operation.type)
+			{
+			case Token::Type::BITSHIFTLEFT:
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::BITSHIFTL, returnNode, parseAdditive());
+				break;
+			case Token::Type::BITSHIFTRIGHT:
+				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::BITSHIFTR, returnNode, parseAdditive());
 				break;
 			}
 		}
@@ -438,16 +480,18 @@ private:
 			identifier = expect(Token::Type::IDENT).text;
 			returnNode = new AST::UnaryOpNode(
 				AST::UnaryOpNode::Mode::INC, 
-				new AST::IdentifierNode(identifier)
-			);
+				new AST::IdentifierNode(identifier));
 			break;
 		case Token::Type::DECREMENT:
 			expect(Token::Type::DECREMENT);
 			identifier = expect(Token::Type::IDENT).text;
 			returnNode = new AST::UnaryOpNode(
 				AST::UnaryOpNode::Mode::DEC, 
-				new AST::IdentifierNode(identifier)
-			);
+				new AST::IdentifierNode(identifier));
+			break;
+		case Token::Type::BITNOT:
+			expect(Token::Type::BITNOT);
+			returnNode = new AST::UnaryOpNode(AST::UnaryOpNode::Mode::BITNOT, parseUnary());
 			break;
 		default: 
 			returnNode = parsePrimary();

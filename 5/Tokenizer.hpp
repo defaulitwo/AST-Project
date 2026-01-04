@@ -22,6 +22,8 @@ public:
 			PLUS, MINUS, 
 			STAR, SLASH, MOD, 
 			INCREMENT, DECREMENT, EQUALITY, NOTEQUALITY,
+			BITAND, BITNOT, BITOR, BITXOR,
+			BITSHIFTLEFT, BITSHIFTRIGHT,
 			LPAREN, RPAREN, LCURLY, RCURLY,
 			NUM, CHAR, IDENT, TRUE, FALSE,
 			SEMICOLON, COMMA,
@@ -187,31 +189,35 @@ public:
 				case '(': pushToken(Token(Token::Type::LPAREN));	i++; break;
 				case ')': pushToken(Token(Token::Type::RPAREN));	i++; break;
 				case '{': pushToken(Token(Token::Type::LCURLY));	i++; break;
-				case '}': pushToken(Token(Token::Type::RCURLY));	i++; break;
+				case '}': 	i++; break;
 				case '=': 
-					if (inputString[i + 1] != '=') { pushToken(Token(Token::Type::EQUAL)); i++; }
+					if (inputString[i+1] != '=') { pushToken(Token(Token::Type::EQUAL)); i++; }
 					else { pushToken(Token(Token::Type::EQUALITY)); i += 2; }
 					break;
 				case '>':
-					if (inputString[i + 1] != '=') { pushToken(Token(Token::Type::GREATER)); i++; }
-					else { pushToken(Token(Token::Type::GREATEREQUAL)); i += 2; }
+					if (inputString[i+1] == '=') { pushToken(Token(Token::Type::GREATEREQUAL)); i += 2; }
+					else if (inputString[i+1] == '>') { pushToken(Token(Token::Type::BITSHIFTRIGHT)); i += 2; }
+					else { pushToken(Token(Token::Type::GREATER)); i++; }
 					break;
 				case '<':
-					if (inputString[i + 1] != '=') { pushToken(Token(Token::Type::LESS)); i++; }
-					else { pushToken(Token(Token::Type::LESSEQUAL)); i += 2; }
+					if (inputString[i+1] == '=') { pushToken(Token(Token::Type::LESSEQUAL)); i += 2; }
+					else if (inputString[i+1] == '<') { pushToken(Token(Token::Type::BITSHIFTLEFT)); i += 2; }
+					else { pushToken(Token(Token::Type::LESS)); i++; }
 					break;
 				case '!': 
-					if (inputString[i + 1] != '=') { pushToken(Token(Token::Type::NOT)); i++; }
+					if (inputString[i+1] != '=') { pushToken(Token(Token::Type::NOT)); i++; }
 					else { pushToken(Token(Token::Type::NOTEQUALITY)); i += 2; }
 					break;
 				case '&': 
-					if (inputString[i + 1] != '&') { /*...*/ i++; }
+					if (inputString[i+1] != '&') { pushToken(Token(Token::Type::BITAND)); i++; }
 					else { pushToken(Token(Token::Type::AND)); i += 2; }
 					break;
 				case '|': 
-					if (inputString[i + 1] != '|') { /*...*/ i++; }
+					if (inputString[i+1] != '|') { pushToken(Token(Token::Type::BITOR)); i++; }
 					else { pushToken(Token(Token::Type::OR)); i += 2; }
 					break;
+				case '^': pushToken(Token(Token::Type::BITXOR));	i++; break;
+				case '~': pushToken(Token(Token::Type::BITNOT));	i++; break;
 				case ';': pushToken(Token(Token::Type::SEMICOLON));	i++; break;
 				case ',': pushToken(Token(Token::Type::COMMA));		i++; break;
 				case '#': // comments
