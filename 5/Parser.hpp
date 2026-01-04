@@ -159,8 +159,7 @@ private:
 	{
 		AST::VariableDeclarationNode* returnNode;
 		returnNode = new AST::VariableDeclarationNode();
-		Token declaration = peek();
-		eat();
+		Token declaration = eat();
 		switch (declaration.type)
 		{
 		case Token::Type::VAR: // local scope variable
