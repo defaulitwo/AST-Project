@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
                 else if (line.compare("exit") == 0) exit(0);
                 else if (line.compare("help") == 0)
                 {
-                    // !!! PLACEHOLDER, ADD HELP LATER !!!
+                    // todo: add help
                 }
                 else if (line.compare("back") == 0)
                 {
@@ -90,7 +90,6 @@ int main(int argc, char* argv[])
                         lines.pop();
                         lineNumber--;
                     }
-
                     refresh = true;
                 }
                 else if (line.compare("edit") == 0) // edit a previously entered line
@@ -128,7 +127,7 @@ int main(int argc, char* argv[])
                     lineNumber = 0;
                     cout << endl;
                 }
-                else if (line.compare("debug") == 0) // delete current snippet
+                else if (line.compare("showtokens") == 0) // show tokenizer output
                 {
                     debug = !debug;
                     refresh = true;

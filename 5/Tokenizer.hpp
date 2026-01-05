@@ -169,66 +169,68 @@ public:
 				else if (textString.compare("not") == 0)		pushToken(Token(Token::Type::NOT));
 				else if (textString.compare("func") == 0)		pushToken(Token(Token::Type::FUNC));
 				// identifier
-				else											pushToken(Token(Token::Type::IDENT, 0, textString));
+				else pushToken(Token(Token::Type::IDENT, 0, textString));
 			}
 			else // symbols
 			{
 				switch (inputString[i])
 				{
 				case '+': 
-					if (inputString[i + 1] != '+') { pushToken(Token(Token::Type::PLUS)); i++; }
+					if (inputString[i+1] != '+') { pushToken(Token(Token::Type::PLUS)); i++; }
 					else { pushToken(Token(Token::Type::INCREMENT)); i += 2; }
-					break;
+					continue;
 				case '-': 					
-					if (inputString[i + 1] != '-') { pushToken(Token(Token::Type::MINUS)); i++; }
+					if (inputString[i+1] != '-') { pushToken(Token(Token::Type::MINUS)); i++; }
 					else { pushToken(Token(Token::Type::DECREMENT)); i += 2; }
-					break;
-				case '*': pushToken(Token(Token::Type::STAR));		i++; break;
-				case '/': pushToken(Token(Token::Type::SLASH));		i++; break;
-				case '%': pushToken(Token(Token::Type::MOD));		i++; break;
-				case '(': pushToken(Token(Token::Type::LPAREN));	i++; break;
-				case ')': pushToken(Token(Token::Type::RPAREN));	i++; break;
-				case '{': pushToken(Token(Token::Type::LCURLY));	i++; break;
-				case '}': pushToken(Token(Token::Type::RCURLY));	i++; break;
+					continue;
+				case '*': pushToken(Token(Token::Type::STAR));		i++; continue;
+				case '/': pushToken(Token(Token::Type::SLASH));		i++; continue;
+				case '%': pushToken(Token(Token::Type::MOD));		i++; continue;
+				case '(': pushToken(Token(Token::Type::LPAREN));	i++; continue;
+				case ')': pushToken(Token(Token::Type::RPAREN));	i++; continue;
+				case '{': pushToken(Token(Token::Type::LCURLY));	i++; continue;
+				case '}': pushToken(Token(Token::Type::RCURLY));	i++; continue;
 				case '=': 
 					if (inputString[i+1] != '=') { pushToken(Token(Token::Type::EQUAL)); i++; }
 					else { pushToken(Token(Token::Type::EQUALITY)); i += 2; }
-					break;
+					continue;
 				case '>':
 					if (inputString[i+1] == '=') { pushToken(Token(Token::Type::GREATEREQUAL)); i += 2; }
 					else if (inputString[i+1] == '>') { pushToken(Token(Token::Type::BITSHIFTRIGHT)); i += 2; }
 					else { pushToken(Token(Token::Type::GREATER)); i++; }
-					break;
+					continue;
 				case '<':
 					if (inputString[i+1] == '=') { pushToken(Token(Token::Type::LESSEQUAL)); i += 2; }
 					else if (inputString[i+1] == '<') { pushToken(Token(Token::Type::BITSHIFTLEFT)); i += 2; }
 					else { pushToken(Token(Token::Type::LESS)); i++; }
-					break;
+					continue;
 				case '!': 
 					if (inputString[i+1] != '=') { pushToken(Token(Token::Type::NOT)); i++; }
 					else { pushToken(Token(Token::Type::NOTEQUALITY)); i += 2; }
-					break;
+					continue;
 				case '&': 
 					if (inputString[i+1] != '&') { pushToken(Token(Token::Type::BITAND)); i++; }
 					else { pushToken(Token(Token::Type::AND)); i += 2; }
-					break;
+					continue;
 				case '|': 
 					if (inputString[i+1] != '|') { pushToken(Token(Token::Type::BITOR)); i++; }
 					else { pushToken(Token(Token::Type::OR)); i += 2; }
-					break;
-				case '^': pushToken(Token(Token::Type::BITXOR));	i++; break;
-				case '~': pushToken(Token(Token::Type::BITNOT));	i++; break;
-				case ';': pushToken(Token(Token::Type::SEMICOLON));	i++; break;
-				case ',': pushToken(Token(Token::Type::COMMA));		i++; break;
+					continue;
+				case '^': pushToken(Token(Token::Type::BITXOR));	i++; continue;
+				case '~': pushToken(Token(Token::Type::BITNOT));	i++; continue;
+				case ';': pushToken(Token(Token::Type::SEMICOLON));	i++; continue;
+				case ',': pushToken(Token(Token::Type::COMMA));		i++; continue;
 				case '#': // comments
 					while (i < inputString.size() && inputString[i] != '\n') i++; 
-					break;
+					continue;
 				case '\'': // character literal
 					i++;
 					pushToken(Token(Token::Type::CHAR, 0, "", inputString[i]));
 					i++;
 					if (inputString[i] == '\'') i++;
-					break;
+					continue;
+				default: // unknown symbol, ignore it
+					i++; continue;
 				}
 			}
 		}

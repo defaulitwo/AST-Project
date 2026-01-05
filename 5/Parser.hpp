@@ -53,10 +53,7 @@ private:
 				+ ", at line " + to_string(peek().lineNumber);
 			throw runtime_error(error);
 		}
-		else
-		{
-			return eat();
-		}
+		else return eat();
 	}
 
 	AST::Node* parseCodeSnippet()
