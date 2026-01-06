@@ -44,9 +44,6 @@
     <ClInclude Include="DynamicList.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CodeGenerator.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ExecutionResult.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>

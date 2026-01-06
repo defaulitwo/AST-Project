@@ -29,21 +29,21 @@ public:
 	}
 
 private:
-
+	// peek at current token index
 	Token peek(int n = 0)
 	{
 		if (tokenIndex + n >= tokenList.size()) return Token(Token::Type::ERROR);
 		return tokenList[tokenIndex + n];
 	}
-
-	Token eat() // consumes a token
+	// consume a token
+	Token eat() 
 	{
 		Token returnToken = peek();
 		if (returnToken.type != Token::Type::ERROR) tokenIndex++;
 		return returnToken;
 	}
-
-	Token expect(Token::Type type) // special version of eat() that asserts a certain token type
+	// special version of eat() that asserts a certain token type
+	Token expect(Token::Type type)
 	{
 		if (peek().type != type)
 		{
@@ -96,7 +96,7 @@ private:
 		return returnNode;
 	}
 
-	AST::StatementNode* parseStatement() // statement
+	AST::StatementNode* parseStatement() // statements
 	{
 		AST::StatementNode* returnNode;
 		switch (peek().type)
@@ -111,7 +111,7 @@ private:
 		case Token::Type::LCURLY: // statement block {...}
 			returnNode = parseBlock();
 			break;
-		case Token::Type::PRINTLN: // print statement
+		case Token::Type::PRINTLN: // print statements
 		case Token::Type::PRINTCHAR:
 		case Token::Type::PRINT:
 			returnNode = parsePrint();
@@ -131,7 +131,7 @@ private:
 		case Token::Type::DO: // do-while loop
 			returnNode = parseDoWhile();
 			break;
-		case Token::Type::RETURN: // jump statements
+		case Token::Type::RETURN: // jump statements (break, return)
 		case Token::Type::BREAK:
 			returnNode = parseJumpStatement();
 			break;
@@ -172,7 +172,7 @@ private:
 			expect(Token::Type::VAR);
 		}
 		returnNode->identifier = expect(Token::Type::IDENT).text;
-		if (peek().type == Token::Type::EQUAL)
+		if (peek().type == Token::Type::EQUAL) // initialization expression
 		{
 			expect(Token::Type::EQUAL);
 			returnNode->initializerExpression = parseExpression();
@@ -221,7 +221,7 @@ private:
 
 	AST::WhileNode* parseWhile() // while loop statement
 	{
-		AST::WhileNode* returnNode = new AST::WhileNode();
+		AST::WhileNode* returnNode = new AST::WhileNode(AST::WhileNode::Type::WHILE);
 		expect(Token::Type::WHILE);
 		returnNode->condition = parseExpression(); // condition
 		returnNode->body = parseStatement(); // body
@@ -255,9 +255,9 @@ private:
 		return returnNode;
 	}
 
-	AST::DoWhileNode* parseDoWhile() // do-while loop statement
+	AST::WhileNode* parseDoWhile() // do-while loop statement
 	{
-		AST::DoWhileNode* returnNode = new AST::DoWhileNode();
+		AST::WhileNode* returnNode = new AST::WhileNode(AST::WhileNode::Type::DOWHILE);
 		expect(Token::Type::DO);
 		returnNode->body = parseStatement();
 		expect(Token::Type::WHILE);
@@ -284,11 +284,7 @@ private:
 
 	AST::ExpressionNode* parseExpression() // expressions
 	{
-		switch (peek().type)
-		{
-		default:
-			return parseAssignment();
-		}
+		return parseAssignment();
 	}
 
 	AST::ExpressionNode* parseAssignment() // assignment operators
@@ -318,10 +314,10 @@ private:
 			Token operation = eat();
 			switch (operation.type)
 			{
-			case Token::Type::AND:
+			case Token::Type::AND: // logical and
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::AND, returnNode, parseBitwiseLogical());
 				break;
-			case Token::Type::OR:
+			case Token::Type::OR: // logical or
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::OR, returnNode, parseBitwiseLogical());
 				break;
 			}
@@ -329,22 +325,22 @@ private:
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parseBitwiseLogical()
+	AST::ExpressionNode* parseBitwiseLogical() // bitwise logical operators
 	{
 		AST::ExpressionNode* returnNode = parseEquality();
-		while (peek().type == Token::Type::BITAND || peek().type == Token::Type::BITOR
-			|| peek().type == Token::Type::BITXOR)
+		while (peek().type == Token::Type::AMPERSAND || peek().type == Token::Type::PIPE
+			|| peek().type == Token::Type::CARET)
 		{
 			Token operation = eat();
 			switch (operation.type)
 			{
-			case Token::Type::BITAND:
+			case Token::Type::AMPERSAND: // bitwise and
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::BITAND, returnNode, parseEquality());
 				break;
-			case Token::Type::BITOR:
+			case Token::Type::PIPE: // bitwise or
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::BITOR, returnNode, parseEquality());
 				break;
-			case Token::Type::BITXOR:
+			case Token::Type::CARET: // bitwise xor
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::BITXOR, returnNode, parseEquality());
 				break;
 			}
@@ -360,10 +356,10 @@ private:
 			Token operation = eat();
 			switch (operation.type)
 			{
-			case Token::Type::EQUALITY:
+			case Token::Type::EQUALITY: // ==
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::EQ, returnNode, parseComparison());
 				break;
-			case Token::Type::NOTEQUALITY:
+			case Token::Type::NOTEQUALITY: // !=
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::NEQ, returnNode, parseComparison());
 				break;
 			}
@@ -380,16 +376,16 @@ private:
 			Token operation = eat();
 			switch (operation.type)
 			{
-			case Token::Type::GREATER:
+			case Token::Type::GREATER: // >
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::GT, returnNode, parseBitwiseShift());
 				break;
-			case Token::Type::LESS:
+			case Token::Type::LESS: // <
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::LT, returnNode, parseBitwiseShift());
 				break;
-			case Token::Type::GREATEREQUAL:
+			case Token::Type::GREATEREQUAL: // >=
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::GTE, returnNode, parseBitwiseShift());
 				break;
-			case Token::Type::LESSEQUAL:
+			case Token::Type::LESSEQUAL: // <=
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::LTE, returnNode, parseBitwiseShift());
 				break;
 			}
@@ -397,7 +393,7 @@ private:
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parseBitwiseShift()
+	AST::ExpressionNode* parseBitwiseShift() // bitwise shift operators
 	{
 		AST::ExpressionNode* returnNode = parseAdditive();
 		while (peek().type == Token::Type::BITSHIFTLEFT || peek().type == Token::Type::BITSHIFTRIGHT)
@@ -405,10 +401,10 @@ private:
 			Token operation = eat();
 			switch (operation.type)
 			{
-			case Token::Type::BITSHIFTLEFT:
+			case Token::Type::BITSHIFTLEFT: // <<
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::BITSHIFTL, returnNode, parseAdditive());
 				break;
-			case Token::Type::BITSHIFTRIGHT:
+			case Token::Type::BITSHIFTRIGHT: // >>
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::BITSHIFTR, returnNode, parseAdditive());
 				break;
 			}
@@ -443,13 +439,13 @@ private:
 			Token operation = eat();
 			switch (operation.type)
 			{
-			case Token::Type::STAR:
+			case Token::Type::STAR: // multiplication
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::MUL, returnNode, parseUnary()); 
 				break;
-			case Token::Type::SLASH:
+			case Token::Type::SLASH: // division
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::DIV, returnNode, parseUnary()); 
 				break;
-			case Token::Type::MOD:
+			case Token::Type::MOD: // modulus
 				returnNode = new AST::BinaryOpNode(AST::BinaryOpNode::Mode::MOD, returnNode, parseUnary()); 
 				break;
 			}
@@ -463,31 +459,42 @@ private:
 		string identifier;
 		switch (peek().type)
 		{
-		case Token::Type::MINUS:
+		case Token::Type::MINUS: // negation
 			expect(Token::Type::MINUS);
 			returnNode = new AST::UnaryOpNode(AST::UnaryOpNode::Mode::NEG, parseUnary());
 			break;
-		case Token::Type::NOT:
+		case Token::Type::NOT: // logical not
 			expect(Token::Type::NOT);
 			returnNode = new AST::UnaryOpNode(AST::UnaryOpNode::Mode::NOT, parseUnary());
 			break;
-		case Token::Type::INCREMENT:
+		case Token::Type::INCREMENT: // prefix increment
 			expect(Token::Type::INCREMENT);
 			identifier = expect(Token::Type::IDENT).text;
 			returnNode = new AST::UnaryOpNode(
 				AST::UnaryOpNode::Mode::INC, 
 				new AST::IdentifierNode(identifier));
 			break;
-		case Token::Type::DECREMENT:
+		case Token::Type::DECREMENT: // prefix decrement
 			expect(Token::Type::DECREMENT);
 			identifier = expect(Token::Type::IDENT).text;
 			returnNode = new AST::UnaryOpNode(
 				AST::UnaryOpNode::Mode::DEC, 
 				new AST::IdentifierNode(identifier));
 			break;
-		case Token::Type::BITNOT:
-			expect(Token::Type::BITNOT);
+		case Token::Type::TILDA: // bitwise not
+			expect(Token::Type::TILDA);
 			returnNode = new AST::UnaryOpNode(AST::UnaryOpNode::Mode::BITNOT, parseUnary());
+			break;
+		case Token::Type::AMPERSAND: // address-of
+			expect(Token::Type::AMPERSAND);
+			identifier = expect(Token::Type::IDENT).text;
+			returnNode = new AST::UnaryOpNode(
+				AST::UnaryOpNode::Mode::ADDR,
+				new AST::IdentifierNode(identifier));
+			break;
+		case Token::Type::STAR: // pointer dereference
+			expect(Token::Type::STAR);
+			returnNode = new AST::UnaryOpNode(AST::UnaryOpNode::Mode::DEREF, parseUnary());
 			break;
 		default: 
 			returnNode = parsePrimary();
@@ -495,44 +502,44 @@ private:
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parsePrimary() // a primary expression, which can not be divided into more expressions
+	AST::ExpressionNode* parsePrimary() // a primary expression
 	{
 		AST::ExpressionNode* returnNode;
 		// identifier and value are declared outside switch, but may not always be used
 		string identifier;
-		int value;
+		long long value;
 		switch (peek().type)
 		{
-		case Token::Type::NUM:
+		case Token::Type::NUM: // numeric literal
 			value = expect(Token::Type::NUM).value;
 			returnNode = new AST::IntegerLiteralNode(value);
 			break;
-		case Token::Type::CHAR:
-			value = (int)expect(Token::Type::CHAR).character;
+		case Token::Type::CHAR: // character literal
+			value = (long long)expect(Token::Type::CHAR).character;
 			returnNode = new AST::IntegerLiteralNode(value);
 			break;
-		case Token::Type::RANDOM:
+		case Token::Type::RANDOM: // random
 			expect(Token::Type::RANDOM);
 			returnNode = new AST::RandomNode();
 			break;
-		case Token::Type::TRUE:
+		case Token::Type::TRUE: // true
 			expect(Token::Type::TRUE);
 			returnNode = new AST::IntegerLiteralNode(1);
 			break;
-		case Token::Type::FALSE:
+		case Token::Type::FALSE: // false
 			expect(Token::Type::FALSE);
 			returnNode = new AST::IntegerLiteralNode(0);
 			break;
-		case Token::Type::LPAREN:
+		case Token::Type::LPAREN: // parenthesized expression
 			expect(Token::Type::LPAREN);
 			returnNode = parseExpression();
 			expect(Token::Type::RPAREN);
 			break;
-		case Token::Type::LCURLY: // statementlist expression, ex: x = { if (y > x) 10 else 20 };
+		case Token::Type::LCURLY: // block expression, ex: x = { if (y > x) 10 else 20 };
 			return new AST::StatementListExpressionNode(parseBlock());
 		case Token::Type::IDENT:
 			identifier = expect(Token::Type::IDENT).text;
-			if (peek().type == Token::Type::LPAREN)
+			if (peek().type == Token::Type::LPAREN) // function call
 			{
 				AST::callNode* newNode = new AST::callNode();
 				newNode->identifier = identifier;
@@ -545,9 +552,9 @@ private:
 				expect(Token::Type::RPAREN);
 				returnNode = newNode;
 			}
-			else returnNode = new AST::IdentifierNode(identifier);
+			else returnNode = new AST::IdentifierNode(identifier); // identifier
 			break;
-		default:
+		default: // invalid token found
 			throw runtime_error(
 				"Parse error: Unexpected token in parsePrimary(), expected an expression, found " 
 				+ Token::toString(peek().type)

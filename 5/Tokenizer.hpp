@@ -22,7 +22,7 @@ public:
 			PLUS, MINUS, 
 			STAR, SLASH, MOD, 
 			INCREMENT, DECREMENT, EQUALITY, NOTEQUALITY,
-			BITAND, BITNOT, BITOR, BITXOR,
+			AMPERSAND, TILDA, PIPE, CARET,
 			BITSHIFTLEFT, BITSHIFTRIGHT,
 			LPAREN, RPAREN, LCURLY, RCURLY,
 			NUM, CHAR, IDENT, TRUE, FALSE,
@@ -36,14 +36,14 @@ public:
 		};
 
 		Type type;
-		int value;
+		long long value;
 		string text;
 		char character;
 		int lineNumber;
 	
 		Token() { }; // default constructor, allows creating an uninitialized array of Token
 
-		Token(Type t, int v = 0, const string& s = "", char c = 0) : type(t), value(v), text(s), character(c) {}
+		Token(Type t, long long v = 0, const string& s = "", char c = 0) : type(t), value(v), text(s), character(c) {}
 		
 		static string toString(Token::Type type)
 		{
@@ -105,13 +105,13 @@ public:
 
 	DynamicList<Token> tokenList;
 	int lineNumber = 0;
-
+	// push new token to token list
 	void pushToken(Token token)
 	{
 		token.lineNumber = lineNumber;
 		tokenList.push(token);
 	}
-
+	// printing tokens, for debugging purposes
 	void printTokensTo(ostream& out) const
 	{
 		for (Token token : tokenList)
@@ -136,7 +136,7 @@ public:
 					numString += inputString[i];
 					i++;
 				}
-				pushToken(Token(Token::Type::NUM, stoi(numString)));
+				pushToken(Token(Token::Type::NUM, stoll(numString)));
 			}
 			else if (isalpha(inputString[i]))
 			{
@@ -147,7 +147,7 @@ public:
 					i++;
 				}
 				// reserved keywords
-				if (textString.compare("print") == 0)			pushToken(Token(Token::Type::PRINT));
+				if		(textString.compare("print") == 0)		pushToken(Token(Token::Type::PRINT));
 				else if (textString.compare("println") == 0)	pushToken(Token(Token::Type::PRINTLN));
 				else if (textString.compare("printchar") == 0)	pushToken(Token(Token::Type::PRINTCHAR));
 				else if (textString.compare("random") == 0)		pushToken(Token(Token::Type::RANDOM));
@@ -209,18 +209,18 @@ public:
 					else { pushToken(Token(Token::Type::NOTEQUALITY)); i += 2; }
 					continue;
 				case '&': 
-					if (inputString[i+1] != '&') { pushToken(Token(Token::Type::BITAND)); i++; }
+					if (inputString[i+1] != '&') { pushToken(Token(Token::Type::AMPERSAND)); i++; }
 					else { pushToken(Token(Token::Type::AND)); i += 2; }
 					continue;
 				case '|': 
-					if (inputString[i+1] != '|') { pushToken(Token(Token::Type::BITOR)); i++; }
+					if (inputString[i+1] != '|') { pushToken(Token(Token::Type::PIPE)); i++; }
 					else { pushToken(Token(Token::Type::OR)); i += 2; }
 					continue;
-				case '^': pushToken(Token(Token::Type::BITXOR));	i++; continue;
-				case '~': pushToken(Token(Token::Type::BITNOT));	i++; continue;
+				case '^': pushToken(Token(Token::Type::CARET));	i++; continue;
+				case '~': pushToken(Token(Token::Type::TILDA));	i++; continue;
 				case ';': pushToken(Token(Token::Type::SEMICOLON));	i++; continue;
 				case ',': pushToken(Token(Token::Type::COMMA));		i++; continue;
-				case '#': // comments
+				case '#': // comment
 					while (i < inputString.size() && inputString[i] != '\n') i++; 
 					continue;
 				case '\'': // character literal
@@ -229,7 +229,7 @@ public:
 					i++;
 					if (inputString[i] == '\'') i++;
 					continue;
-				default: // unknown symbol, ignore it
+				default: // unknown symbol, skip it
 					i++; continue;
 				}
 			}

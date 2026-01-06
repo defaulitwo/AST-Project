@@ -132,7 +132,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AST.hpp" />
-    <ClInclude Include="CodeGenerator.hpp" />
     <ClInclude Include="DynamicList.hpp" />
     <ClInclude Include="ExecutionResult.hpp" />
     <ClInclude Include="Parser.hpp" />

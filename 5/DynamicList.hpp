@@ -37,7 +37,7 @@ public:
 		delete[] array_;
 	}
 
-	bool empty()
+	bool empty() const
 	{
 		return size_ == 0;
 	}
@@ -104,7 +104,7 @@ public:
 		return array_[index];
 	}
 
-	// to make container work with range-based for loop ex: for (int i : list1) { ... }
+	// these are needed to make container work with range-based for loop ex: for (int i : list1) { ... }
 	T* begin() { return array_; } // pointer to first element of array
 	T* end() { return array_ + size_; } // pointer to one position after last element of array
 

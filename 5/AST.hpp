@@ -17,7 +17,7 @@ class AST
 {
 public:
 
-	class Node
+	class Node // abstract node type
 	{
 	public:
 		Node() = default;
@@ -25,7 +25,7 @@ public:
 		virtual ExecutionResult execute(Environment& env) = 0;
 	};
 
-	class StatementNode : public Node
+	class StatementNode : public Node // abstract statement node type
 	{
 	public:
 		StatementNode() = default;
@@ -33,7 +33,7 @@ public:
 		virtual ExecutionResult execute(Environment& env) = 0;
 	};
 
-	class ExpressionNode : public Node
+	class ExpressionNode : public Node // abstract expression node type
 	{
 	public:
 		ExpressionNode() = default;
@@ -41,12 +41,11 @@ public:
 		virtual ExecutionResult execute(Environment& env) = 0;
 	};
 
-	class StatementList : public StatementNode
+	class StatementList : public StatementNode // statement list, AKA a scope
 	{
 	public:
+		int variableCount; // used for tracking number of variables on stack, to pop when out of scope
 		DynamicList<StatementNode*> statements;
-		int variableCount;
-
 		StatementList() : variableCount(0) { }
 		virtual ~StatementList() { for (Node* n : statements) delete n; }
 		virtual ExecutionResult execute(Environment& env) override
@@ -59,9 +58,13 @@ public:
 				if (execution.type == ExecutionResult::Type::VariableDeclaration) { variableCount++; }
 				if (execution.type == ExecutionResult::Type::Return) { break; }
 			}
+			clean(env);
+			return execution;
+		}
+		void clean(Environment& env)
+		{
 			env.popVariables(variableCount);
 			variableCount = 0; // reset variableCount for later calls
-			return execution;
 		}
 	};
 
@@ -71,11 +74,11 @@ public:
 		string identifier;
 		IdentifierNode(const string& name) : identifier(name) { }
 		~IdentifierNode() { }
-		int getValue(Environment& env) const
+		long long getValue(Environment& env) const
 		{
-			return env.getValue(identifier);
+			return env.getVariable(identifier).value;
 		}
-		void setValue(Environment& env, int v)
+		void setValue(Environment& env, long long v)
 		{
 			env.setValue(identifier, v);
 		}
@@ -85,11 +88,11 @@ public:
 		}
 	};
 
-	class IntegerLiteralNode : public ExpressionNode
+	class IntegerLiteralNode : public ExpressionNode // integer literals
 	{
 	public:
-		int value;
-		IntegerLiteralNode(int v = 0) : value(v) { }
+		long long value;
+		IntegerLiteralNode(long long v = 0) : value(v) { }
 		~IntegerLiteralNode() { }
 		virtual ExecutionResult execute(Environment& env) override
 		{
@@ -97,7 +100,7 @@ public:
 		}
 	};
 
-	class RandomNode : public ExpressionNode
+	class RandomNode : public ExpressionNode // random
 	{
 	public:
 		virtual ExecutionResult execute(Environment& env) override
@@ -107,7 +110,7 @@ public:
 		}
 	};
 
-	class BinaryOpNode : public ExpressionNode
+	class BinaryOpNode : public ExpressionNode // binary operations
 	{
 	public:
 		enum class Mode 
@@ -115,69 +118,76 @@ public:
 			ADD, SUB, MUL, DIV, MOD, ASS, AND, OR, EQ, NEQ, LT, GT, LTE, GTE, 
 			BITAND, BITOR, BITXOR, BITSHIFTL, BITSHIFTR
 		};
-
 		Mode mode;
 		ExpressionNode* LOperand;
 		ExpressionNode* ROperand;
-		
 		BinaryOpNode(Mode m, ExpressionNode* l = nullptr, ExpressionNode* r = nullptr) : mode(m), LOperand(l), ROperand(r) { }
 		~BinaryOpNode() { delete LOperand; delete ROperand; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			ExecutionResult result;
-			int LOperandExecution;
-			int ROperandExecution;
+			long long returnValue = 0;
 			switch (mode)
 			{
-			case Mode::ADD:	result.value = LOperand->execute(env).value + ROperand->execute(env).value; break;
-			case Mode::SUB:	result.value = LOperand->execute(env).value - ROperand->execute(env).value; break;
-			case Mode::MUL:	result.value = LOperand->execute(env).value * ROperand->execute(env).value; break;
+			case Mode::ADD: returnValue = LOperand->execute(env).value + ROperand->execute(env).value; break;
+			case Mode::SUB:	returnValue = LOperand->execute(env).value - ROperand->execute(env).value; break;
+			case Mode::MUL:	returnValue = LOperand->execute(env).value * ROperand->execute(env).value; break;
 			case Mode::DIV:
+			{
+				long long LOperandExecution, ROperandExecution;
 				LOperandExecution = LOperand->execute(env).value;
 				ROperandExecution = ROperand->execute(env).value;
 				if (ROperandExecution == 0) throw runtime_error("Run error: Attempted to divide by zero");
-				result.value = LOperandExecution / ROperandExecution;
+				returnValue = LOperandExecution / ROperandExecution;
 				break;
+			}
 			case Mode::MOD:
+			{
+				long long LOperandExecution, ROperandExecution;
 				LOperandExecution = LOperand->execute(env).value;
 				ROperandExecution = ROperand->execute(env).value;
 				if (ROperandExecution == 0) throw runtime_error("Run error: Attempted to mod by zero");
-				result.value = LOperandExecution % ROperandExecution;
+				returnValue = LOperandExecution % ROperandExecution;
 				break;
-			case Mode::EQ:	result.value = LOperand->execute(env).value == ROperand->execute(env).value; break;
-			case Mode::NEQ:	result.value = LOperand->execute(env).value != ROperand->execute(env).value; break;
-			case Mode::GT:	result.value = LOperand->execute(env).value > ROperand->execute(env).value; break;
-			case Mode::LT:	result.value = LOperand->execute(env).value < ROperand->execute(env).value; break;
-			case Mode::GTE:	result.value = LOperand->execute(env).value >= ROperand->execute(env).value; break;
-			case Mode::LTE:	result.value = LOperand->execute(env).value <= ROperand->execute(env).value; break;
+			}
+
+			case Mode::EQ:	returnValue = LOperand->execute(env).value == ROperand->execute(env).value; break;
+			case Mode::NEQ:	returnValue = LOperand->execute(env).value != ROperand->execute(env).value; break;
+			case Mode::GT:	returnValue = LOperand->execute(env).value > ROperand->execute(env).value; break;
+			case Mode::LT:	returnValue = LOperand->execute(env).value < ROperand->execute(env).value; break;
+			case Mode::GTE:	returnValue = LOperand->execute(env).value >= ROperand->execute(env).value; break;
+			case Mode::LTE:	returnValue = LOperand->execute(env).value <= ROperand->execute(env).value; break;
 			case Mode::AND:	// AND, OR with short-circuiting
-				if (!(LOperand->execute(env).value)) result.value = 0;
-				else if (!(ROperand->execute(env).value)) result.value = 0;
-				else result.value = 1;
+				if (!(LOperand->execute(env).value)) returnValue = 0;
+				else if (!(ROperand->execute(env).value)) returnValue = 0;
+				else returnValue = 1;
 				break;
 			case Mode::OR:
-				if (LOperand->execute(env).value) result.value = 1;
-				else if (ROperand->execute(env).value) result.value = 1;
-				else result.value = 0;
+				if (LOperand->execute(env).value) returnValue = 1;
+				else if (ROperand->execute(env).value) returnValue = 1;
+				else returnValue = 0;
 				break;
 			case Mode::ASS:
-				result = ROperand->execute(env);
-				((IdentifierNode*)LOperand)->setValue(env, result.value);
+			{
+				string identifier;
+				returnValue = ROperand->execute(env).value;
+				identifier = ((IdentifierNode*)LOperand)->identifier;
+				env.getVariable(identifier).value = returnValue;
 				break;
-			case Mode::BITAND:	result.value = LOperand->execute(env).value & ROperand->execute(env).value; break;
-			case Mode::BITOR:	result.value = LOperand->execute(env).value | ROperand->execute(env).value; break;
-			case Mode::BITXOR:	result.value = LOperand->execute(env).value ^ ROperand->execute(env).value; break;
-			case Mode::BITSHIFTL:	result.value = LOperand->execute(env).value << ROperand->execute(env).value; break;
-			case Mode::BITSHIFTR:	result.value = LOperand->execute(env).value >> ROperand->execute(env).value; break;
 			}
-			return result;
+			case Mode::BITAND: 	 returnValue = LOperand->execute(env).value & ROperand->execute(env).value; break;
+			case Mode::BITOR:	 returnValue = LOperand->execute(env).value | ROperand->execute(env).value; break;
+			case Mode::BITXOR:	 returnValue = LOperand->execute(env).value ^ ROperand->execute(env).value; break;
+			case Mode::BITSHIFTL:returnValue = LOperand->execute(env).value << ROperand->execute(env).value; break;
+			case Mode::BITSHIFTR:returnValue = LOperand->execute(env).value >> ROperand->execute(env).value; break;
+			}
+			return ExecutionResult(ExecutionResult::Type::Normal, returnValue);
 		}
 	};
 
-	class UnaryOpNode : public ExpressionNode
+	class UnaryOpNode : public ExpressionNode // unary operations
 	{
 	public:
-		enum class Mode { NEG, NOT, INC, DEC, BITNOT };
+		enum class Mode { NEG, NOT, INC, DEC, BITNOT, ADDR, DEREF };
 
 		Mode mode;
 		ExpressionNode* operand;
@@ -186,25 +196,36 @@ public:
 		~UnaryOpNode() { delete operand; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			ExecutionResult result;
+			long long returnValue = 0;
 			string identifier;
 			switch (mode)
 			{
-			case Mode::NEG: result.value = -(operand->execute(env).value); break;
-			case Mode::NOT: result.value = !(operand->execute(env).value); break;
+			case Mode::NEG: returnValue = -(operand->execute(env).value); break;
+			case Mode::NOT: returnValue = !(operand->execute(env).value); break;
 			case Mode::INC:
 				identifier = ((IdentifierNode*)operand)->identifier;
-				env.setValue(identifier, env.getValue(identifier) + 1);
-				result.value = env.getValue(identifier);
+				env.setValue(identifier, env.getVariable(identifier).value + 1);
+				returnValue = env.getVariable(identifier).value;
 				break;
 			case Mode::DEC:
 				identifier = ((IdentifierNode*)operand)->identifier;
-				env.setValue(identifier, env.getValue(identifier) - 1);
-				result.value = env.getValue(identifier);
+				env.setValue(identifier, env.getVariable(identifier).value - 1);
+				returnValue = env.getVariable(identifier).value;
 				break;
-			case Mode::BITNOT: result.value = ~(operand->execute(env).value); break;
+			case Mode::BITNOT: returnValue = ~(operand->execute(env).value); break;
+			case Mode::ADDR:
+				identifier = ((IdentifierNode*)operand)->identifier;
+				returnValue = env.getAddress(identifier);
+				break;
+			case Mode::DEREF:
+				{
+				long long address = operand->execute(env).value;
+				env.checkAddress(address);
+				returnValue = *((long long*)address);
+				break;
+				}
 			}
-			return result;
+			return ExecutionResult(ExecutionResult::Type::Normal, returnValue);
 		}
 	};
 
@@ -220,31 +241,29 @@ public:
 		}
 	};
 
-	class VariableDeclarationNode : public StatementNode
+	class VariableDeclarationNode : public StatementNode // variable declaration
 	{
 	public:
 		enum class Type { VARIABLE, GLOBAL, INPUT };
+		Type type;
 		string identifier;
 		ExpressionNode* initializerExpression;
-		Type type;
 		VariableDeclarationNode(const string& identifier = "", ExpressionNode* n = nullptr) : identifier(identifier), initializerExpression(n) {}
 		~VariableDeclarationNode() { delete initializerExpression; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			int initialValue = 0;
-			ExecutionResult execution;
-			if (initializerExpression) { execution = initializerExpression->execute(env); initialValue = execution.value; }
+			long long initialValue = 0;
+			if (initializerExpression) { initialValue = initializerExpression->execute(env).value; }
 			switch (type)
 			{
 			case Type::VARIABLE: env.pushVariable(identifier, initialValue); break; // local variable
 			case Type::GLOBAL: env.pushGlobal(identifier, initialValue); break; // global variable
-			case Type::INPUT:  // input variable
+			case Type::INPUT: // input variable
 			{
-				int n;
-				if (!(std::cin >> n))
+				long long n;
+				if (!(std::cin >> n)) // invalid input value, fall back to initialization value
 				{
-					// invalid value, fall back to initialization
-					n = initialValue;
+					n = initialValue; 
 					cin.clear();
 					cin.ignore(1);
 				}
@@ -258,7 +277,7 @@ public:
 		}
 	};	
 
-	class PrintNode : public StatementNode
+	class PrintNode : public StatementNode // print statements
 	{
 	public:
 		enum class Type { PRINTEXPR, PRINTCHAR, PRINTLN };
@@ -278,13 +297,12 @@ public:
 		}
 	};
 
-	class IfNode : public StatementNode
+	class IfNode : public StatementNode // if statement
 	{
 	public:
 		ExpressionNode* condition;
 		StatementNode* body;
 		StatementNode* elseBody;
-
 		IfNode() : condition(nullptr), body(nullptr), elseBody(nullptr) { }
 		~IfNode() { delete condition; delete body; delete elseBody; }
 		virtual ExecutionResult execute(Environment& env) override
@@ -307,54 +325,49 @@ public:
 		}
 	};
 
-	class WhileNode : public StatementNode
+	class WhileNode : public StatementNode // while loop
 	{
 	public:
+		enum class Type { WHILE, DOWHILE };
+		Type type;
 		ExpressionNode* condition;
 		StatementNode* body;
-
-		WhileNode() : condition(nullptr), body(nullptr) { }
+		WhileNode(Type t, ExpressionNode* c = nullptr, StatementNode* b = nullptr) 
+			: type(t), condition(c), body(b) { }
 		~WhileNode() { delete condition; delete body; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			ExecutionResult execution;
-			while (condition->execute(env).value)
+			ExecutionResult bodyExecution;
+			switch (type)
 			{
-				execution = body->execute(env);
-				if (execution.type == ExecutionResult::Type::Break) { break; }
-				if (execution.type == ExecutionResult::Type::Continue) { continue; }
-				if (execution.type == ExecutionResult::Type::Return) { return execution; }
+			case Type::WHILE:
+				while (condition->execute(env).value)
+				{
+					bodyExecution = body->execute(env);
+					if (bodyExecution.type == ExecutionResult::Type::Break) { break; }
+					if (bodyExecution.type == ExecutionResult::Type::Continue) { continue; }
+					if (bodyExecution.type == ExecutionResult::Type::Return) { return bodyExecution; }
+				}
+				break;
+			case Type::DOWHILE:
+				do
+				{
+					bodyExecution = body->execute(env);
+					if (bodyExecution.type == ExecutionResult::Type::Break) { break; }
+					if (bodyExecution.type == ExecutionResult::Type::Continue) { continue; }
+					if (bodyExecution.type == ExecutionResult::Type::Return)
+					{
+						return bodyExecution;
+					}
+				} while (condition->execute(env).value);
+				break;
+			default: return ExecutionResult(ExecutionResult::Type::Normal);
 			}
 			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
 	};
 
-	class DoWhileNode : public StatementNode
-	{
-	public:
-		ExpressionNode* condition;
-		StatementNode* body;
-
-		DoWhileNode() : condition(nullptr), body(nullptr) {}
-		~DoWhileNode() { delete condition; delete body; }
-		virtual ExecutionResult execute(Environment& env) override
-		{
-			ExecutionResult execution;
-			do
-			{
-				execution = body->execute(env);
-				if (execution.type == ExecutionResult::Type::Break) { break; }
-				if (execution.type == ExecutionResult::Type::Continue) { continue; }
-				if (execution.type == ExecutionResult::Type::Return)
-				{
-					return execution;
-				}
-			} while (condition->execute(env).value);
-			return ExecutionResult(ExecutionResult::Type::Normal);
-		}
-	};
-
-	class ForNode : public StatementNode
+	class ForNode : public StatementNode // for loop
 	{
 	public:
 		VariableDeclarationNode* initialization;
@@ -373,17 +386,21 @@ public:
 				if (execution.type == ExecutionResult::Type::Continue) { continue; }
 				if (execution.type == ExecutionResult::Type::Return) 
 				{ 
-					env.popVariables(1); // pop the for loop's initialization variable
+					clean(env);
 					return execution;
 				}
 				update->execute(env);
 			}
-			if (initialization) env.popVariables(1); // pop the for loop's initialization variable
+			clean(env);
 			return ExecutionResult(ExecutionResult::Type::Normal);
+		}
+		void clean(Environment& env)
+		{
+			if (initialization) env.popVariables(1); // pop the for loop's initialization variable
 		}
 	};
 
-	class RepeatNode : public StatementNode
+	class RepeatNode : public StatementNode // repeat loop
 	{
 	public:
 		ExpressionNode* iterations;
@@ -392,25 +409,23 @@ public:
 		~RepeatNode() { delete iterations; delete body; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			int iterationCount = iterations->execute(env).value;
-			if (iterationCount > 0)
+			long long iterationCount = iterations->execute(env).value;
+			if (iterationCount <= 0) return ExecutionResult(ExecutionResult::Type::Normal);
+			for (long long i = 0; i < iterationCount; i++)
 			{
-				for (int i = 0; i < iterationCount; i++)
+				ExecutionResult execution = body->execute(env);
+				if (execution.type == ExecutionResult::Type::Break) { break; }
+				if (execution.type == ExecutionResult::Type::Continue) { continue; }
+				if (execution.type == ExecutionResult::Type::Return)
 				{
-					ExecutionResult execution = body->execute(env);
-					if (execution.type == ExecutionResult::Type::Break) { break; }
-					if (execution.type == ExecutionResult::Type::Continue) { continue; }
-					if (execution.type == ExecutionResult::Type::Return)
-					{
-						return execution;
-					}
+					return execution;
 				}
 			}
 			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
 	};
 
-	class JumpNode : public StatementNode
+	class JumpNode : public StatementNode // jump nodes (break, return)
 	{
 	public:
 		enum class Type { BREAK, RETURN };
@@ -426,27 +441,28 @@ public:
 			case Type::RETURN:
 				if (expression) return ExecutionResult(ExecutionResult::Type::Return, expression->execute(env).value);
 				else return ExecutionResult(ExecutionResult::Type::Return);
+			default: return ExecutionResult(ExecutionResult::Type::Normal);
 			}
 		}
 	};
 
-	class FunctionDeclarationNode : public Node
+	class FunctionDeclarationNode : public Node // function declaration
 	{
 	public:
 		string identifier;
 		DynamicList<string> parameters;
 		StatementList* body;
-		FunctionDeclarationNode() { }
+		FunctionDeclarationNode() : body(nullptr) { }
 		~FunctionDeclarationNode() { }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			env.pushFunction(identifier, parameters);
+			env.pushFunction(identifier, parameters, new Environment, body);
 			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
 		
 	};
 
-	class callNode : public ExpressionNode
+	class callNode : public ExpressionNode // function call
 	{
 	public:
 		string identifier;
@@ -455,13 +471,20 @@ public:
 		~callNode() { for (ExpressionNode* n : arguments) delete n; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			DynamicList<int> inputs;
+			DynamicList<long long> inputs;
 			for (ExpressionNode* n : arguments) inputs.push(n->execute(env).value);
 			Environment::Function& f = env.getFunction(identifier, inputs);
-			return ExecutionResult(ExecutionResult::Type::Normal);
+			for (int i = 0; i < f.parameters.size(); i++) // push arguments
+			{
+				f.environment->pushVariable(f.parameters[i], inputs[i]);
+			}
+			f.environment->functions.push(f); // to allow recursion
+			ExecutionResult execution = ((AST::Node*)(f.body))->execute(*(f.environment));
+			f.environment->popVariables(f.parameters.size()); // pop arguments
+			return ExecutionResult(ExecutionResult::Type::Normal, execution.value);
 		}
 	};
-	
+	// execute the AST
 	ExecutionResult execute(Environment& env) 
 	{
 		return root->execute(env);
