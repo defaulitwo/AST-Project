@@ -152,10 +152,9 @@ int main(int argc, char* argv[])
             string input;
             for (string line : lines)
             {
-                input += line;
-                input += '\n';
+                input += line += '\n';
             }
-
+            
             execute(input, env);
 
             pastLines = lines; // save last execution to be able to be recalled

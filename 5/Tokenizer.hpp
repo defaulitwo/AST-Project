@@ -16,7 +16,7 @@ public:
 	public:
 		enum class Type 
 		{ 
-			VAR, GLOBAL, INPUT,
+			VAR, GLOBAL, INPUT, ARRAY,
 			EQUAL, GREATER, LESS, GREATEREQUAL, LESSEQUAL,
 			AND, OR, NOT,
 			PLUS, MINUS, 
@@ -24,7 +24,7 @@ public:
 			INCREMENT, DECREMENT, EQUALITY, NOTEQUALITY,
 			AMPERSAND, TILDA, PIPE, CARET,
 			BITSHIFTLEFT, BITSHIFTRIGHT,
-			LPAREN, RPAREN, LCURLY, RCURLY,
+			LPAREN, RPAREN, LCURLY, RCURLY, LSQUAREBRACKET, RSQUAREBRACKET,
 			NUM, CHAR, IDENT, TRUE, FALSE,
 			SEMICOLON, COMMA,
 			IF, ELSE, WHILE, FOR, REPEAT, DO,
@@ -43,7 +43,8 @@ public:
 	
 		Token() { }; // default constructor, allows creating an uninitialized array of Token
 
-		Token(Type t, long long v = 0, const string& s = "", char c = 0) : type(t), value(v), text(s), character(c) {}
+		Token(Type t, long long v = 0, const string& s = "", char c = 0) 
+			: type(t), value(v), text(s), character(c) { }
 		
 		static string toString(Token::Type type)
 		{
@@ -52,6 +53,7 @@ public:
 			case Type::VAR:				return "VAR";
 			case Type::GLOBAL:			return "GLOBAL";
 			case Type::INPUT:			return "INPUT";
+			case Type::ARRAY:			return "ARRAY";
 			case Type::EQUAL:			return "EQUAL";
 			case Type::GREATER:			return "GREATER";
 			case Type::LESS:			return "LESS";
@@ -154,6 +156,7 @@ public:
 				else if (textString.compare("var") == 0)		pushToken(Token(Token::Type::VAR));
 				else if (textString.compare("global") == 0)		pushToken(Token(Token::Type::GLOBAL));
 				else if (textString.compare("input") == 0)		pushToken(Token(Token::Type::INPUT));
+				else if (textString.compare("array") == 0)		pushToken(Token(Token::Type::ARRAY));
 				else if (textString.compare("true") == 0)		pushToken(Token(Token::Type::TRUE));
 				else if (textString.compare("false") == 0)		pushToken(Token(Token::Type::FALSE));
 				else if (textString.compare("if") == 0)			pushToken(Token(Token::Type::IF));
@@ -164,10 +167,17 @@ public:
 				else if (textString.compare("do") == 0)			pushToken(Token(Token::Type::DO));
 				else if (textString.compare("break") == 0)		pushToken(Token(Token::Type::BREAK));
 				else if (textString.compare("return") == 0)		pushToken(Token(Token::Type::RETURN));
+				else if (textString.compare("continue") == 0)	pushToken(Token(Token::Type::CONTINUE));
+				else if (textString.compare("func") == 0)		pushToken(Token(Token::Type::FUNC));
+				// english replacements for some symbols
 				else if (textString.compare("and") == 0)		pushToken(Token(Token::Type::AND));
 				else if (textString.compare("or") == 0)			pushToken(Token(Token::Type::OR));
 				else if (textString.compare("not") == 0)		pushToken(Token(Token::Type::NOT));
-				else if (textString.compare("func") == 0)		pushToken(Token(Token::Type::FUNC));
+				else if (textString.compare("is") == 0)			pushToken(Token(Token::Type::EQUAL));
+				else if (textString.compare("equalto") == 0)	pushToken(Token(Token::Type::EQUALITY));
+				else if (textString.compare("lessthan") == 0)	pushToken(Token(Token::Type::LESS));
+				else if (textString.compare("greaterthan") == 0)pushToken(Token(Token::Type::GREATER));
+				else if (textString.compare("notequalto") == 0)	pushToken(Token(Token::Type::NOTEQUALITY));
 				// identifier
 				else pushToken(Token(Token::Type::IDENT, 0, textString));
 			}
@@ -190,6 +200,8 @@ public:
 				case ')': pushToken(Token(Token::Type::RPAREN));	i++; continue;
 				case '{': pushToken(Token(Token::Type::LCURLY));	i++; continue;
 				case '}': pushToken(Token(Token::Type::RCURLY));	i++; continue;
+				case '[': pushToken(Token(Token::Type::LSQUAREBRACKET));	i++; continue;
+				case ']': pushToken(Token(Token::Type::RSQUAREBRACKET));	i++; continue;
 				case '=': 
 					if (inputString[i+1] != '=') { pushToken(Token(Token::Type::EQUAL)); i++; }
 					else { pushToken(Token(Token::Type::EQUALITY)); i += 2; }

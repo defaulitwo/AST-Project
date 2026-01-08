@@ -70,6 +70,11 @@ public:
 		size_--;
 	}
 
+	void clear()
+	{
+		size_ = 0;
+	}
+
 	void push(T element)
 	{
 		growIfNeeded();
