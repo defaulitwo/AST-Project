@@ -63,7 +63,8 @@ int main(int argc, char* argv[])
     }
     else // interactive mode
     {
-        cout << endl << "INTERACTIVE MODE: Write code snippet and enter run" << endl << endl;
+        cout << "SISLIC INTERPRETER" << endl << endl;
+        cout << "INTERACTIVE MODE: Write code snippet and enter run" << endl << endl;
         // REPL
         DynamicList<string> lines; // acts as a stack to hold lines of code
         DynamicList<string> pastLines;
@@ -156,7 +157,7 @@ int main(int argc, char* argv[])
             
             execute(input, env);
 
-            pastLines = lines; // save last execution to be able to be recalled
+            pastLines = lines; // save last executed lines to be able to be recalled
             lines.clear(); // clear lines
         }
     }

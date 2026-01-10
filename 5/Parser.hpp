@@ -128,7 +128,8 @@ private:
 		case Token::Type::DO: // do-while loop
 			returnNode = parseDoWhile();
 			break;
-		case Token::Type::RETURN: // jump statements (break, return)
+		case Token::Type::RETURN: // jump statements (break, return, continue)
+		case Token::Type::CONTINUE:
 		case Token::Type::BREAK:
 			returnNode = parseJumpStatement();
 			break;
@@ -299,6 +300,9 @@ private:
 		{
 		case Token::Type::BREAK: // break, keeps exiting scopes until program exits or encounters a loop
 			returnNode->type = AST::JumpNode::Type::BREAK;
+			break;
+		case Token::Type::CONTINUE: // continue, skips to next iteration of loop
+			returnNode->type = AST::JumpNode::Type::CONTINUE;
 			break;
 		case Token::Type::RETURN: // like break, but doesnt stop at loops, and may return an expression's value
 			returnNode->type = AST::JumpNode::Type::RETURN;

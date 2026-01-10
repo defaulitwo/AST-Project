@@ -12,7 +12,7 @@ private:
 	int size_;
 	T* array_;
 
-	void growIfNeeded() // automatically increase capacity if full
+	void growIfNeeded() // automatically double capacity if full
 	{
 		if (size_ == capacity_)
 		{

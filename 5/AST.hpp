@@ -63,8 +63,9 @@ public:
 			for (StatementNode* statement : statements)
 			{
 				execution = statement->execute(env);
-				if (execution.type == ExecutionResult::Type::Break) { return execution; }
-				if (execution.type == ExecutionResult::Type::Return) { break; }
+				if (execution.type == ExecutionResult::Type::Break ||
+					execution.type == ExecutionResult::Type::Continue) return execution;
+				if (execution.type == ExecutionResult::Type::Return) break;
 				if (execution.type == ExecutionResult::Type::VariableDeclaration) { variableCount++; }
 				else if (execution.type == ExecutionResult::Type::ArrayDeclaration) 
 				{ 
@@ -396,27 +397,27 @@ public:
 		~WhileNode() { delete condition; delete body; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			ExecutionResult bodyExecution;
+			ExecutionResult bodyResult;
 			switch (type)
 			{
 			case Type::WHILE:
 				while (condition->execute(env).value)
 				{
-					bodyExecution = body->execute(env);
-					if (bodyExecution.type == ExecutionResult::Type::Break) { break; }
-					if (bodyExecution.type == ExecutionResult::Type::Continue) { continue; }
-					if (bodyExecution.type == ExecutionResult::Type::Return) { return bodyExecution; }
+					bodyResult = body->execute(env);
+					if (bodyResult.type == ExecutionResult::Type::Break) { break; }
+					if (bodyResult.type == ExecutionResult::Type::Continue) { continue; }
+					if (bodyResult.type == ExecutionResult::Type::Return) { return bodyResult; }
 				}
 				break;
 			case Type::DOWHILE:
 				do
 				{
-					bodyExecution = body->execute(env);
-					if (bodyExecution.type == ExecutionResult::Type::Break) { break; }
-					if (bodyExecution.type == ExecutionResult::Type::Continue) { continue; }
-					if (bodyExecution.type == ExecutionResult::Type::Return)
+					bodyResult = body->execute(env);
+					if (bodyResult.type == ExecutionResult::Type::Break) { break; }
+					if (bodyResult.type == ExecutionResult::Type::Continue) { continue; }
+					if (bodyResult.type == ExecutionResult::Type::Return)
 					{
-						return bodyExecution;
+						return bodyResult;
 					}
 				} while (condition->execute(env).value);
 				break;
@@ -440,13 +441,13 @@ public:
 			if (initialization) initialization->execute(env);
 			for (;condition->execute(env).value; update->execute(env))
 			{
-				ExecutionResult bodyExecution = body->execute(env);
-				if (bodyExecution.type == ExecutionResult::Type::Break) { break; }
-				if (bodyExecution.type == ExecutionResult::Type::Continue) { continue; }
-				if (bodyExecution.type == ExecutionResult::Type::Return) 
+				ExecutionResult bodyResult = body->execute(env);
+				if (bodyResult.type == ExecutionResult::Type::Break) { break; }
+				if (bodyResult.type == ExecutionResult::Type::Continue) { continue; }
+				if (bodyResult.type == ExecutionResult::Type::Return) 
 				{ 
 					clean(env);
-					return bodyExecution;
+					return bodyResult;
 				}
 			}
 			clean(env);
@@ -471,12 +472,12 @@ public:
 			if (iterationCount <= 0) return ExecutionResult(ExecutionResult::Type::Normal);
 			for (long long i = 0; i < iterationCount; i++)
 			{
-				ExecutionResult execution = body->execute(env);
-				if (execution.type == ExecutionResult::Type::Break) { break; }
-				if (execution.type == ExecutionResult::Type::Continue) { continue; }
-				if (execution.type == ExecutionResult::Type::Return)
+				ExecutionResult bodyResult = body->execute(env);
+				if (bodyResult.type == ExecutionResult::Type::Break) { break; }
+				if (bodyResult.type == ExecutionResult::Type::Continue) { continue; }
+				if (bodyResult.type == ExecutionResult::Type::Return)
 				{
-					return execution;
+					return bodyResult;
 				}
 			}
 			return ExecutionResult(ExecutionResult::Type::Normal);
@@ -486,7 +487,7 @@ public:
 	class JumpNode : public StatementNode // jump nodes (break, return)
 	{
 	public:
-		enum class Type { BREAK, RETURN };
+		enum class Type { BREAK, CONTINUE, RETURN };
 		Type type;
 		ExpressionNode* expression;
 		JumpNode() : expression(nullptr) { };
@@ -496,6 +497,7 @@ public:
 			switch (type)
 			{
 			case Type::BREAK: return ExecutionResult(ExecutionResult::Type::Break);
+			case Type::CONTINUE: return ExecutionResult(ExecutionResult::Type::Continue);
 			case Type::RETURN:
 				if (expression) return ExecutionResult(ExecutionResult::Type::Return, expression->execute(env).value);
 				else return ExecutionResult(ExecutionResult::Type::Return);
@@ -515,7 +517,7 @@ public:
 		virtual ExecutionResult execute(Environment& env) override
 		{
 			env.pushFunction(identifier, parameters, body);
-			return ExecutionResult(ExecutionResult::Type::Normal);
+			return ExecutionResult(ExecutionResult::Type::FunctionDeclaration);
 		}
 	};
 
@@ -529,7 +531,8 @@ public:
 		~CallNode() { for (ExpressionNode* n : arguments) delete n; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			if (!cachedFunction) cachedFunction = &env.getFunction(identifier, arguments.size()); // cache function pointer
+			// lookup and cache function pointer
+			if (!cachedFunction) cachedFunction = &env.getFunction(identifier, arguments.size()); 
 			for (int i = 0; i < arguments.size(); i++) // push arguments
 			{
 				cachedFunction->environment->pushVariable(
