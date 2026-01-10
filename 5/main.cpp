@@ -7,19 +7,18 @@
 #include "Environment.hpp"
 using namespace std;
 
-bool debug = false;
+bool showTokens = false;
 
 void execute(const string& input, Environment& env)
 {
     // tokenizing the input string, generating the token list
     Tokenizer tokenizer(input);
-    if (debug)
+    if (showTokens)
     {
         cout << "Tokenization result:" << endl;
         tokenizer.printTokensTo(cout);
         cout << endl;
     }
-
     // parsing the token list, building AST
     try
     {
@@ -66,7 +65,7 @@ int main(int argc, char* argv[])
     {
         cout << endl << "INTERACTIVE MODE: Write code snippet and enter run" << endl << endl;
         // REPL
-        DynamicList<string> lines;
+        DynamicList<string> lines; // acts as a stack to hold lines of code
         DynamicList<string> pastLines;
         while (true)
         {
@@ -116,20 +115,20 @@ int main(int argc, char* argv[])
                 }
                 else if (line.compare("recall") == 0) // recall last executed code
                 {
-                    while (!lines.empty()) lines.pop();
+                    lines.clear();
                     lines = pastLines;
                     lineNumber = pastLines.size();
                     refresh = true;
                 }
                 else if (line.compare("discard") == 0) // delete current snippet
                 {
-                    while (!lines.empty()) lines.pop();
+                    lines.clear();
                     lineNumber = 0;
                     cout << endl;
                 }
                 else if (line.compare("showtokens") == 0) // show tokenizer output
                 {
-                    debug = !debug;
+                    showTokens = !showTokens;
                     refresh = true;
                 }
                 else // push new line
@@ -158,7 +157,7 @@ int main(int argc, char* argv[])
             execute(input, env);
 
             pastLines = lines; // save last execution to be able to be recalled
-            while (!lines.empty()) lines.pop(); // clear lines
+            lines.clear(); // clear lines
         }
     }
 }

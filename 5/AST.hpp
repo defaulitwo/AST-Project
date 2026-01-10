@@ -12,8 +12,6 @@
 #include "DynamicList.hpp"
 #include "ExecutionResult.hpp"
 #include "Environment.hpp"
-#include <chrono>
-#include <thread>
 using namespace std;
 
 class AST
@@ -25,7 +23,7 @@ public:
 	public:
 		Node() = default;
 		virtual ~Node() = default;
-		virtual ExecutionResult execute(Environment& env) = 0; // pure virtual function, makes it so class is abstract and cannot be instantiated.
+		virtual ExecutionResult execute(Environment& env) = 0; // pure virtual method, makes it so class is abstract and cannot be instantiated.
 	};
 
 	class LValue // LValue interface, for things that can be assigned to
@@ -52,7 +50,7 @@ public:
 		virtual ExecutionResult execute(Environment& env) = 0;
 	};
 
-	class StatementList : public StatementNode // statement list, AKA a scope
+	class StatementList : public StatementNode // statement list, AKA a scope { }
 	{
 	public:
 		int variableCount; // used for tracking number of variables on stack, to pop when out of scope
@@ -87,31 +85,19 @@ public:
 	{
 	public:
 		string identifier;
-		Environment::Variable* cachedVariable;
-		IdentifierNode(const string& name) : identifier(name), cachedVariable(nullptr) { }
+		IdentifierNode(const string& name) : identifier(name) { }
 		~IdentifierNode() { }
 		virtual long long getValue(Environment& env) override
 		{
-			if (cachedVariable) return cachedVariable->value;
-			cache(env);
 			return env.getVariable(identifier).value;
 		}
 		virtual void setValue(Environment& env, long long v) override
 		{
-			if (cachedVariable) cachedVariable->value = v;
-			else
-			{
-				env.getVariable(identifier).value = v;
-				cache(env);
-			}
+			env.setValue(identifier, v);
 		}
 		virtual ExecutionResult execute(Environment& env) override
 		{
 			return ExecutionResult(ExecutionResult::Type::Normal, getValue(env));
-		}
-		void cache(Environment& env)
-		{
-			cachedVariable = &env.getVariable(identifier);
 		}
 	};
 
@@ -193,7 +179,7 @@ public:
 			case Mode::ASS: // assignment
 			{
 				returnValue = ROperand->execute(env).value;
-				LValue* lv = dynamic_cast<LValue*>(LOperand);
+				LValue* lv = dynamic_cast<LValue*>(LOperand); // dynamic cast is required here due to multiple inheritance
 				if (!lv) throw std::runtime_error("Run error: attempted to assign to a non-LValue");
 				lv->setValue(env, returnValue);
 				break;
@@ -243,9 +229,9 @@ public:
 				break;
 			case Mode::DEREF:
 				{
-				long long address = operand->execute(env).value;
-				env.checkAddress(address);
-				returnValue = *((long long*)address);
+				Environment::Variable* address = (Environment::Variable*)operand->execute(env).value;
+				//env.checkAddress(address);
+				returnValue = (long long)address;
 				break;
 				}
 			}
@@ -345,6 +331,7 @@ public:
 					env.pushGlobal(elementIdentifier, 0);
 				}
 				return ExecutionResult(ExecutionResult::Type::GlobalArrayDeclaration, initialValue);
+			default: return ExecutionResult(ExecutionResult::Type::Normal);
 			}
 		}
 	};	
@@ -471,7 +458,7 @@ public:
 		}
 	};
 
-	class RepeatNode : public StatementNode // repeat
+	class RepeatNode : public StatementNode // repeat loop
 	{
 	public:
 		ExpressionNode* iterations;
@@ -527,7 +514,7 @@ public:
 		~FunctionDeclarationNode() {}
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			env.pushFunction(identifier, parameters, new Environment, body, env);
+			env.pushFunction(identifier, parameters, body);
 			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
 	};
@@ -537,18 +524,17 @@ public:
 	public:
 		string identifier;
 		DynamicList<ExpressionNode*> arguments;
-		DynamicList<long long> argumentValues;
-		Environment::Function* cachedFunction; // for caching function pointer, to avoid searching for function in env every time
+		Environment::Function* cachedFunction; // for caching function pointer, to avoid searching env every time
 		CallNode() : cachedFunction(nullptr) { }
 		~CallNode() { for (ExpressionNode* n : arguments) delete n; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			for (ExpressionNode* n : arguments) argumentValues.push(n->execute(env).value); // evaluate arguments
-			if (!cachedFunction) cachedFunction = &env.getFunction(identifier, argumentValues.size()); // cache function pointer
-			argumentValues.clear();
-			for (int i = 0; i < cachedFunction->parameters.size(); i++) // push arguments
+			if (!cachedFunction) cachedFunction = &env.getFunction(identifier, arguments.size()); // cache function pointer
+			for (int i = 0; i < arguments.size(); i++) // push arguments
 			{
-				cachedFunction->environment->pushVariable(cachedFunction->parameters[i], argumentValues[i]);
+				cachedFunction->environment->pushVariable(
+					cachedFunction->parameters[i], 
+					arguments[i]->execute(env).value);
 			}
 			ExecutionResult execution = ((AST::Node*)(cachedFunction->body))->execute(*(cachedFunction->environment));
 			clean(env);
@@ -556,7 +542,7 @@ public:
 		}
 		void clean(Environment& env)
 		{
-			cachedFunction->environment->popVariables(cachedFunction->parameters.size()); // pop arguments
+			cachedFunction->environment->popVariables(arguments.size()); // pop arguments
 		}
 	};
 

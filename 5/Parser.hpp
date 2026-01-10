@@ -15,8 +15,8 @@ typedef Tokenizer::Token Token;
 class Parser
 {
 public:
-	DynamicList<Token> tokenList;
-	int tokenIndex;
+	DynamicList<Token> tokenList; // list of tokens to parse
+	int tokenIndex; // index (pointer) of current token being parsed
 
 	Parser() : tokenIndex(0) { }
 
@@ -24,7 +24,7 @@ public:
 	{
 		tokenList = inputTokenizer.tokenList;
 		AST resultTree;
-		resultTree.root = parseStatementList();
+		resultTree.root = parseStatementList(); // a program is a statement list
 		return resultTree;
 	}
 
@@ -42,25 +42,19 @@ private:
 		if (returnToken.type != Token::Type::ERROR) tokenIndex++;
 		return returnToken;
 	}
-	// special version of eat() that asserts a certain token type
+	// version of eat() that asserts a certain token type
 	Token expect(Token::Type type)
 	{
 		if (peek().type != type)
 		{
-			string error = "Parse error: Unexpected token, expected "
+			throw runtime_error(
+				"Parse error: Unexpected token, expected "
 				+ Token::toString(type)
-				+ ", found " + Token::toString(peek().type) 
-				+ ", at line " + to_string(peek().lineNumber);
-			throw runtime_error(error);
+				+ ", found " + Token::toString(peek().type)
+				+ ", at line " + to_string(peek().lineNumber));
 		}
 		else return eat();
 	}
-
-	//AST::Node* parseCodeSnippet()
-	//{
-	//	if (peek().type == Token::Type::FUNC) return parseFunctionDeclaration();
-	//	else return parseStatementList();
-	//}
 
 	AST::FunctionDeclarationNode* parseFunctionDeclaration()
 	{
@@ -219,7 +213,7 @@ private:
 		returnNode = new AST::PrintNode();
 		switch (peek().type)
 		{
-		case Token::Type::PRINT: // print, outputs value of expression evaluation
+		case Token::Type::PRINT: // regular print, outputs value of expression evaluation
 			expect(Token::Type::PRINT);
 			returnNode->type = AST::PrintNode::Type::PRINTEXPR;
 			break;
@@ -227,7 +221,7 @@ private:
 			expect(Token::Type::PRINTLN); 
 			returnNode->type = AST::PrintNode::Type::PRINTLN;
 			break;
-		case Token::Type::PRINTCHAR: // printchar, prints the character whose ascii code is the expression evaluation
+		case Token::Type::PRINTCHAR: // printchar, prints the character whose ascii code is the expression evaluation value
 			expect(Token::Type::PRINTCHAR);
 			returnNode->type = AST::PrintNode::Type::PRINTCHAR;
 			break;
@@ -260,6 +254,16 @@ private:
 		return returnNode;
 	}
 
+	AST::WhileNode* parseDoWhile() // do-while loop
+	{
+		AST::WhileNode* returnNode = new AST::WhileNode(AST::WhileNode::Type::DOWHILE);
+		expect(Token::Type::DO);
+		returnNode->body = parseStatement();
+		expect(Token::Type::WHILE);
+		returnNode->condition = parseExpression();
+		return returnNode;
+	}
+
 	AST::ForNode* parseFor() // for loop
 	{
 		AST::ForNode* returnNode = new AST::ForNode();
@@ -278,22 +282,12 @@ private:
 		return returnNode;
 	}
 
-	AST::RepeatNode* parseRepeat() // repeat statement ex: repeat 5 println 10;
+	AST::RepeatNode* parseRepeat() // repeat loop, ex: repeat 5 println 10;
 	{
 		AST::RepeatNode* returnNode = new AST::RepeatNode();
 		expect(Token::Type::REPEAT);
 		returnNode->iterations = parseExpression(); // iterations
 		returnNode->body = parseStatement(); // body
-		return returnNode;
-	}
-
-	AST::WhileNode* parseDoWhile() // do-while loop statement
-	{
-		AST::WhileNode* returnNode = new AST::WhileNode(AST::WhileNode::Type::DOWHILE);
-		expect(Token::Type::DO);
-		returnNode->body = parseStatement();
-		expect(Token::Type::WHILE);
-		returnNode->condition = parseExpression();
 		return returnNode;
 	}
 
@@ -530,7 +524,7 @@ private:
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parsePrimary() // a primary expression
+	AST::ExpressionNode* parsePrimary() // primary expression
 	{
 		AST::ExpressionNode* returnNode;
 		// identifier and value are declared outside switch, but may not always be used
@@ -580,7 +574,7 @@ private:
 				expect(Token::Type::RPAREN);
 				returnNode = newNode;
 			}
-			else if (peek().type == Token::Type::LSQUAREBRACKET) // array access
+			else if (peek().type == Token::Type::LSQUAREBRACKET) // subscript
 			{
 				AST::ArrayAccessNode* newNode = new AST::ArrayAccessNode();
 				newNode->identifier = identifier;
@@ -595,8 +589,7 @@ private:
 			throw runtime_error(
 				"Parse error: Unexpected token in parsePrimary(), expected an expression, found " 
 				+ Token::toString(peek().type)
-				+ ", at line " + to_string(peek().lineNumber)
-			);
+				+ ", at line " + to_string(peek().lineNumber));
 		}
 		return returnNode;
 	}

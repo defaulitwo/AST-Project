@@ -6,6 +6,8 @@ template<typename T>
 class DynamicList
 {
 private:
+	const static int DEFAULT_CAPACITY = 100;
+
 	int capacity_;
 	int size_;
 	T* array_;
@@ -24,7 +26,7 @@ private:
 	}
 
 public:
-	DynamicList(int c = 1024) : capacity_(c), size_(0), array_(new T[c]) { }
+	DynamicList(int c = DEFAULT_CAPACITY) : capacity_(c), size_(0), array_(new T[c]) { };
 
 	DynamicList(const DynamicList& other) : capacity_(other.capacity_), size_(other.size_), array_(new T[other.capacity_])
 	{
@@ -87,6 +89,12 @@ public:
 		return array_[--size_];
 	}
 
+	void popMultiple(int n)
+	{
+		if (size_ - n < 0) { size_ = 0; return; }
+		size_ -= n;
+	}
+
 	DynamicList& operator=(const DynamicList& other)
 	{
 		if (this == &other) return *this;
@@ -110,7 +118,7 @@ public:
 	}
 
 	// these are needed to make container work with range-based for loop ex: for (int i : list1) { ... }
-	T* begin() { return array_; } // pointer to first element of array
+	T* begin() { return array_; }		// pointer to first element of array
 	T* end() { return array_ + size_; } // pointer to one position after last element of array
 
 	const T* begin() const { return array_; }

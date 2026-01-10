@@ -3,7 +3,7 @@
 class ExecutionResult // a value and enum pair which are used to transfer info and data between nodes
 {
 public:
-	enum class Type 
+	enum class Type // note: some types are unused
 	{
 		Normal, Null, Return, Break, Continue, 
 		VariableDeclaration, GlobalDeclaration, ArrayDeclaration, GlobalArrayDeclaration,
