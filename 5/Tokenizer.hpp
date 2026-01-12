@@ -50,53 +50,61 @@ public:
 		{
 			switch (type)
 			{
-			case Type::VAR:				return "VAR";
-			case Type::GLOBAL:			return "GLOBAL";
-			case Type::INPUT:			return "INPUT";
-			case Type::ARRAY:			return "ARRAY";
-			case Type::EQUAL:			return "EQUAL";
-			case Type::GREATER:			return "GREATER";
-			case Type::LESS:			return "LESS";
-			case Type::GREATEREQUAL:	return "GREATEREQUAL";
-			case Type::LESSEQUAL:		return "LESSEQUAL";
-			case Type::AND:				return "AND";
-			case Type::OR:				return "OR";
-			case Type::NOT:				return "NOT";
-			case Type::PLUS:			return "PLUS";
-			case Type::MINUS:			return "MINUS";
-			case Type::STAR:			return "STAR";
-			case Type::SLASH:			return "SLASH";
-			case Type::MOD:				return "MOD";
-			case Type::INCREMENT:		return "INCREMENT";
-			case Type::DECREMENT:		return "DECREMENT";
-			case Type::EQUALITY:		return "EQUALITY";
-			case Type::NOTEQUALITY:		return "NOTEQUALITY";
-			case Type::LPAREN:			return "LPAREN";
-			case Type::RPAREN:			return "RPAREN";
-			case Type::LCURLY:			return "LCURLY";
-			case Type::RCURLY:			return "RCURLY";
+			case Type::VAR:				return "var";
+			case Type::GLOBAL:			return "global";
+			case Type::INPUT:			return "input";
+			case Type::ARRAY:			return "array";
+			case Type::EQUAL:			return "=";
+			case Type::GREATER:			return ">";
+			case Type::LESS:			return "<";
+			case Type::GREATEREQUAL:	return ">=";
+			case Type::LESSEQUAL:		return "<=";
+			case Type::AND:				return "&&";
+			case Type::OR:				return "||";
+			case Type::NOT:				return "!";
+			case Type::PLUS:			return "+";
+			case Type::MINUS:			return "-";
+			case Type::STAR:			return "*";
+			case Type::SLASH:			return "/";
+			case Type::MOD:				return "%";
+			case Type::INCREMENT:		return "++";
+			case Type::DECREMENT:		return "--";
+			case Type::EQUALITY:		return "==";
+			case Type::NOTEQUALITY:		return "!=";
+			case Type::AMPERSAND:		return "&";
+			case Type::TILDA:			return "~";
+			case Type::PIPE:			return "|";
+			case Type::CARET:			return "^";
+			case Type::BITSHIFTLEFT:	return "<<";
+			case Type::BITSHIFTRIGHT:	return ">>";
+			case Type::LPAREN:			return "(";
+			case Type::RPAREN:			return ")";
+			case Type::LCURLY:			return "{";
+			case Type::RCURLY:			return "}";
+			case Type::LSQUAREBRACKET:	return "[";
+			case Type::RSQUAREBRACKET:	return "]";
 			case Type::NUM:				return "NUMBER";
 			case Type::CHAR:			return "CHAR";
 			case Type::IDENT:			return "IDENTIFIER";
-			case Type::TRUE:			return "TRUE";
-			case Type::FALSE:			return "FALSE";
-			case Type::SEMICOLON:		return "SEMICOLON";
-			case Type::COMMA:			return "COMMA";
-			case Type::IF:				return "IF";
-			case Type::ELSE:			return "ELSE";
-			case Type::WHILE:			return "WHILE";
-			case Type::FOR:				return "FOR";
-			case Type::REPEAT:			return "REPEAT";
-			case Type::DO:				return "DO";
-			case Type::PRINT:			return "PRINT";
-			case Type::PRINTLN:			return "PRINTLN";
-			case Type::PRINTCHAR:		return "PRINTCHAR";
-			case Type::RANDOM:			return "RANDOM";
-			case Type::BREAK:			return "BREAK";
-			case Type::CONTINUE:		return "CONTINUE";
-			case Type::RETURN:			return "RETURN";
+			case Type::TRUE:			return "true";
+			case Type::FALSE:			return "false";
+			case Type::SEMICOLON:		return ";";
+			case Type::COMMA:			return ",";
+			case Type::IF:				return "if";
+			case Type::ELSE:			return "else";
+			case Type::WHILE:			return "while";
+			case Type::FOR:				return "for";
+			case Type::REPEAT:			return "repeat";
+			case Type::DO:				return "do";
+			case Type::PRINT:			return "print";
+			case Type::PRINTLN:			return "println";
+			case Type::PRINTCHAR:		return "printchar";
+			case Type::RANDOM:			return "random";
+			case Type::BREAK:			return "break";
+			case Type::CONTINUE:		return "continue";
+			case Type::RETURN:			return "return";
 			case Type::ERROR:			return "ERROR";
-			case Type::FUNC:			return "FUNC";
+			case Type::FUNC:			return "func";
 			case Type::END:				return "END";
 			}
 			return "UNDEFINED";
@@ -106,7 +114,7 @@ public:
 	typedef Token::Type TokenType;
 
 	DynamicList<Token> tokenList;
-	int lineNumber = 0;
+	int lineNumber;
 	// push new token to token list
 	void pushToken(Token token)
 	{
@@ -123,13 +131,13 @@ public:
 		cout << endl;
 	}
 
-	Tokenizer(const string& inputString) 
+	Tokenizer(const string& inputString) : lineNumber(0)
 	{
 		int i = 0;
 		while (i < inputString.size())
 		{
 			if (inputString[i] == '\n') lineNumber++;
-			if (isspace(inputString[i])) { i++; continue; } // ignore whitespaces
+			if (isspace(inputString[i])) { i++; continue; } // ignoring whitespaces
 			if (isdigit(inputString[i])) // number literal
 			{
 				string numString;
@@ -169,15 +177,10 @@ public:
 				else if (textString.compare("return") == 0)		pushToken(Token(Token::Type::RETURN));
 				else if (textString.compare("continue") == 0)	pushToken(Token(Token::Type::CONTINUE));
 				else if (textString.compare("func") == 0)		pushToken(Token(Token::Type::FUNC));
-				// english replacements for some symbols
+				// english replacements for SOME symbols
 				else if (textString.compare("and") == 0)		pushToken(Token(Token::Type::AND));
 				else if (textString.compare("or") == 0)			pushToken(Token(Token::Type::OR));
 				else if (textString.compare("not") == 0)		pushToken(Token(Token::Type::NOT));
-				else if (textString.compare("is") == 0)			pushToken(Token(Token::Type::EQUAL));
-				else if (textString.compare("equalto") == 0)	pushToken(Token(Token::Type::EQUALITY));
-				else if (textString.compare("lessthan") == 0)	pushToken(Token(Token::Type::LESS));
-				else if (textString.compare("greaterthan") == 0)pushToken(Token(Token::Type::GREATER));
-				else if (textString.compare("notequalto") == 0)	pushToken(Token(Token::Type::NOTEQUALITY));
 				// identifier
 				else pushToken(Token(Token::Type::IDENT, 0, textString));
 			}
@@ -228,8 +231,8 @@ public:
 					if (inputString[i+1] != '|') { pushToken(Token(Token::Type::PIPE)); i++; }
 					else { pushToken(Token(Token::Type::OR)); i += 2; }
 					continue;
-				case '^': pushToken(Token(Token::Type::CARET));	i++; continue;
-				case '~': pushToken(Token(Token::Type::TILDA));	i++; continue;
+				case '^': pushToken(Token(Token::Type::CARET));		i++; continue;
+				case '~': pushToken(Token(Token::Type::TILDA));		i++; continue;
 				case ';': pushToken(Token(Token::Type::SEMICOLON));	i++; continue;
 				case ',': pushToken(Token(Token::Type::COMMA));		i++; continue;
 				case '#': // comment

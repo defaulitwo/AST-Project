@@ -25,7 +25,7 @@ public:
 		string identifier;
 		DynamicList<string> parameters;
 		Environment* environment; // every function gets its own environment
-		void* body; // root of function body AST, gets casted to AST::StatementListNode* when executed
+		void* body; // root of function body AST, gets casted to AST::StatementList* when executed
 		Function() = default;
 		Function(const string& i, DynamicList<string>& p, Environment* e, void* b)
 			: identifier(i), parameters(p), environment(e), body(b) {
@@ -62,9 +62,6 @@ public:
 	// fetch variable
 	Variable& getVariable(const string& name)
 	{
-		// although linear search is used here, which is not very fast, caching pointers 
-		// is used sometimes in the AST, which helps compensate for this
-		// searching needs to happen only once per variable lookup if cached
 		for (int i = variables.size() - 1; i >= 0; i--) // first traverse scope BACKWARDS
 		{
 			Variable& v = variables[i];
@@ -83,23 +80,24 @@ public:
 		getVariable(name).value = v;
 	}
 	// fetch address of variable
-	long long getAddress(const string& name)
+	Variable* getAddress(const string& name)
 	{
-		return (long long)(&(getVariable(name)));
+		return &(getVariable(name));
 	}
-	// check if address is out of bounds // REMOVED FOR NOW
-	//void checkAddress(Variable* addr)
-	//{
-	//	if (addr > variables.end() || addr < variables.begin())
-	//	{
-	//		throw runtime_error("Run error: Out of bounds access attempt");
-	//	}
-	//}
+	// check if address is out of bounds
+	void checkAddress(Variable* addr)
+	{
+		if (addr >= variables.begin() && addr < variables.end()) return;
+		if (addr >= globals.begin() && addr < globals.end()) return;
+		if (parent) return parent->checkAddress(addr);
+		throw runtime_error("Run error: Out of bounds access attempt");
+	}
 	// push new function
 	void pushFunction(const string& name, DynamicList<string>& parameters, void* body)
 	{
-		for (Function& f : functions) if (f.parameters.size() == parameters.size() && name.compare(f.identifier) == 0)
-			return; // can't define function with same signature more than once, ignore
+		for (Function& f : functions) 
+			if (f.parameters.size() == parameters.size() && name.compare(f.identifier) == 0)
+				return; // can't define function with same signature more than once, ignore
 		Function f = Function(name, parameters, new Environment, body);
 		f.environment->parent = this; // set parent to current environment
 		functions.push(f);
@@ -107,9 +105,6 @@ public:
 	// fetch function
 	Function& getFunction(const string& name, int argCount)
 	{
-		// although linear search is used here, which is not very fast, caching pointers 
-		// is used sometimes in the AST, which helps compensate for this
-		// searching needs to happen only ONCE per function lookup if cached
 		for (Function& f : functions)
 		{
 			if (f.parameters.size() == argCount && f.identifier.compare(name) == 0)
@@ -118,7 +113,7 @@ public:
 			}
 		}
 		if (parent) return parent->getFunction(name, argCount); // not found in current environment, search in parent
-		throw runtime_error("Run error: Function signature \"" + name + "( " + to_string(argCount) + " arguments )\" is undefined.");
+		throw runtime_error("Run error: Function signature \"" + name + "(..." + to_string(argCount) + " parameters...)\" is undefined.");
 	}
 };
 

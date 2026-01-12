@@ -11,11 +11,13 @@ private:
 	int capacity_;
 	int size_;
 	T* array_;
+	bool resizeable_;
 
 	void growIfNeeded() // automatically double capacity if full
 	{
 		if (size_ == capacity_)
 		{
+			if (!resizeable_) return;
 			capacity_ *= 2;
 			T* newArray = new T[capacity_];
 			for (int i = 0; i < size_; i++)
@@ -26,7 +28,7 @@ private:
 	}
 
 public:
-	DynamicList(int c = DEFAULT_CAPACITY) : capacity_(c), size_(0), array_(new T[c]) { };
+	DynamicList(int c = DEFAULT_CAPACITY, bool r = true) : capacity_(c), size_(0), array_(new T[c]), resizeable_(r) { };
 
 	DynamicList(const DynamicList& other) : capacity_(other.capacity_), size_(other.size_), array_(new T[other.capacity_])
 	{

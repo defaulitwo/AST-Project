@@ -50,10 +50,10 @@ public:
 		virtual ExecutionResult execute(Environment& env) = 0;
 	};
 
-	class StatementList : public StatementNode // statement list, AKA a scope { }
+	class StatementList : public StatementNode // statement list, AKA a scope { ... }
 	{
 	public:
-		int variableCount; // used for tracking number of variables on stack, to pop when out of scope
+		int variableCount; // used for tracking number of variables on stack, to pop when exiting scope
 		DynamicList<StatementNode*> statements;
 		StatementList() : variableCount(0) { }
 		virtual ~StatementList() { for (Node* n : statements) delete n; }
@@ -62,14 +62,21 @@ public:
 			ExecutionResult execution;
 			for (StatementNode* statement : statements)
 			{
-				execution = statement->execute(env);
+				try { execution = statement->execute(env); }
+				catch (const runtime_error& error)
+				{
+					clean(env);
+					throw;
+				}
 				if (execution.type == ExecutionResult::Type::Break ||
-					execution.type == ExecutionResult::Type::Continue) return execution;
+					execution.type == ExecutionResult::Type::Continue) {
+					clean(env);  return execution;
+				}
 				if (execution.type == ExecutionResult::Type::Return) break;
 				if (execution.type == ExecutionResult::Type::VariableDeclaration) { variableCount++; }
-				else if (execution.type == ExecutionResult::Type::ArrayDeclaration) 
-				{ 
-					variableCount += execution.value; 
+				else if (execution.type == ExecutionResult::Type::ArrayDeclaration)
+				{
+					variableCount += execution.value;
 				}
 			}
 			clean(env);
@@ -77,8 +84,8 @@ public:
 		}
 		void clean(Environment& env)
 		{
-			env.popVariables(variableCount);
-			variableCount = 0; // reset variableCount for later calls
+			env.popVariables(variableCount); // clean local variables
+			variableCount = 0; // reset variableCount for later runs
 		}
 	};
 
@@ -193,7 +200,7 @@ public:
 			case Mode::BITSHIFTL:returnValue = LOperand->execute(env).value << ROperand->execute(env).value; break;
 			case Mode::BITSHIFTR:returnValue = LOperand->execute(env).value >> ROperand->execute(env).value; break;
 			}
-			return ExecutionResult(ExecutionResult::Type::Normal, returnValue);
+			return ExecutionResult(ExecutionResult::Type::Null, returnValue);
 		}
 	};
 
@@ -204,7 +211,7 @@ public:
 		Mode mode;
 		ExpressionNode* operand;
 		UnaryOpNode(Mode m, ExpressionNode* o) : mode(m), operand(o) { }
-		~UnaryOpNode() { delete operand; }
+		virtual ~UnaryOpNode() { delete operand; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
 			long long returnValue = 0;
@@ -226,39 +233,54 @@ public:
 			case Mode::BITNOT: returnValue = ~(operand->execute(env).value); break;
 			case Mode::ADDR:
 				identifier = ((IdentifierNode*)operand)->identifier;
-				returnValue = env.getAddress(identifier);
+				returnValue = (long long)env.getAddress(identifier);
 				break;
-			case Mode::DEREF:
-				{
-				Environment::Variable* address = (Environment::Variable*)operand->execute(env).value;
-				//env.checkAddress(address);
-				returnValue = (long long)address;
-				break;
-				}
 			}
-			return ExecutionResult(ExecutionResult::Type::Normal, returnValue);
+			return ExecutionResult(ExecutionResult::Type::Null, returnValue);
 		}
 	};
 
-	class ArrayAccessNode : public ExpressionNode, public LValue // subscript operator ex: arr[4];
+	class PointerDereferenceNode : public UnaryOpNode, public LValue
+	{
+	public:
+		PointerDereferenceNode(ExpressionNode* o) : UnaryOpNode(UnaryOpNode::Mode::DEREF, o) { }
+		~PointerDereferenceNode() override = default;
+		virtual long long getValue(Environment& env) override
+		{
+			Environment::Variable* address = (Environment::Variable*)(operand->execute(env).value);
+			env.checkAddress(address); // check if address is out of bounds
+			return address->value;
+		}
+		virtual void setValue(Environment& env, long long v) override
+		{
+			Environment::Variable* address = (Environment::Variable*)(operand->execute(env).value);
+			env.checkAddress(address); // check if address is out of bounds
+			address->value = v;
+		}
+		ExecutionResult execute(Environment& env) override
+		{
+			return ExecutionResult(ExecutionResult::Type::Normal, getValue(env));
+		}
+	};
+
+	class SubscriptNode : public ExpressionNode, public LValue // subscript operator ex: arr[4];
 	{
 	public:
 		string identifier;
 		ExpressionNode* indexExpression;
-		Environment::Variable* cachedVariable;
-		ArrayAccessNode(): indexExpression(nullptr), cachedVariable(nullptr) { }
-		~ArrayAccessNode() { delete indexExpression; }
+		SubscriptNode(): indexExpression(nullptr) { }
+		~SubscriptNode() { delete indexExpression; }
 		virtual long long getValue(Environment& env) override
 		{
-			if (!cachedVariable) cachedVariable = &env.getVariable(identifier);
-			long long i = this->indexExpression->execute(env).value;
-			return (cachedVariable + i)->value;
+			Environment::Variable& var = env.getVariable(identifier);
+			long long index = indexExpression->execute(env).value;
+			return (&var + index)->value;
 		}
 		virtual void setValue(Environment& env, long long v) override
 		{
-			if (!cachedVariable) cachedVariable = &env.getVariable(identifier);
-			long long i = this->indexExpression->execute(env).value;
-			(cachedVariable + i)->value = v;
+			Environment::Variable& var = env.getVariable(identifier);
+			long long index = indexExpression->execute(env).value;
+			(&var + index)->value = v;
 		}
 		virtual ExecutionResult execute(Environment& env) override
 		{
@@ -318,11 +340,11 @@ public:
 				{
 					string elementIdentifier;
 					if (i == 0) elementIdentifier = identifier;
-					else elementIdentifier = identifier += to_string(i);
+					else elementIdentifier = identifier + to_string(i);
 					env.pushVariable(elementIdentifier, 0);
 				}
 				return ExecutionResult(ExecutionResult::Type::ArrayDeclaration, initialValue);
-			case Type::GLOBALARRAY: // local variable array
+			case Type::GLOBALARRAY: // global variable array
 				if (initialValue <= 0) throw runtime_error("Run error: Invalid array size");
 				for (int i = 0; i < initialValue; i++)
 				{
@@ -332,7 +354,7 @@ public:
 					env.pushGlobal(elementIdentifier, 0);
 				}
 				return ExecutionResult(ExecutionResult::Type::GlobalArrayDeclaration, initialValue);
-			default: return ExecutionResult(ExecutionResult::Type::Normal);
+			default: return ExecutionResult(ExecutionResult::Type::Null);
 			}
 		}
 	};	
@@ -404,21 +426,18 @@ public:
 				while (condition->execute(env).value)
 				{
 					bodyResult = body->execute(env);
-					if (bodyResult.type == ExecutionResult::Type::Break) { break; }
-					if (bodyResult.type == ExecutionResult::Type::Continue) { continue; }
-					if (bodyResult.type == ExecutionResult::Type::Return) { return bodyResult; }
+					if (bodyResult.type == ExecutionResult::Type::Break) break;
+					if (bodyResult.type == ExecutionResult::Type::Continue) continue;
+					if (bodyResult.type == ExecutionResult::Type::Return) return bodyResult;
 				}
 				break;
 			case Type::DOWHILE:
 				do
 				{
 					bodyResult = body->execute(env);
-					if (bodyResult.type == ExecutionResult::Type::Break) { break; }
-					if (bodyResult.type == ExecutionResult::Type::Continue) { continue; }
-					if (bodyResult.type == ExecutionResult::Type::Return)
-					{
-						return bodyResult;
-					}
+					if (bodyResult.type == ExecutionResult::Type::Break) break;
+					if (bodyResult.type == ExecutionResult::Type::Continue) continue;
+					if (bodyResult.type == ExecutionResult::Type::Return) return bodyResult;
 				} while (condition->execute(env).value);
 				break;
 			default: return ExecutionResult(ExecutionResult::Type::Normal);
@@ -441,9 +460,15 @@ public:
 			if (initialization) initialization->execute(env);
 			for (;condition->execute(env).value; update->execute(env))
 			{
-				ExecutionResult bodyResult = body->execute(env);
-				if (bodyResult.type == ExecutionResult::Type::Break) { break; }
-				if (bodyResult.type == ExecutionResult::Type::Continue) { continue; }
+				ExecutionResult bodyResult;
+				try { bodyResult = body->execute(env); }
+				catch (const runtime_error& e) 
+				{ 
+					clean(env); 
+					throw; 
+				}
+				if (bodyResult.type == ExecutionResult::Type::Break) break;
+				if (bodyResult.type == ExecutionResult::Type::Continue) continue;
 				if (bodyResult.type == ExecutionResult::Type::Return) 
 				{ 
 					clean(env);
@@ -473,12 +498,9 @@ public:
 			for (long long i = 0; i < iterationCount; i++)
 			{
 				ExecutionResult bodyResult = body->execute(env);
-				if (bodyResult.type == ExecutionResult::Type::Break) { break; }
-				if (bodyResult.type == ExecutionResult::Type::Continue) { continue; }
-				if (bodyResult.type == ExecutionResult::Type::Return)
-				{
-					return bodyResult;
-				}
+				if (bodyResult.type == ExecutionResult::Type::Break) break;
+				if (bodyResult.type == ExecutionResult::Type::Continue) continue;
+				if (bodyResult.type == ExecutionResult::Type::Return) return bodyResult;
 			}
 			return ExecutionResult(ExecutionResult::Type::Normal);
 		}
@@ -526,26 +548,24 @@ public:
 	public:
 		string identifier;
 		DynamicList<ExpressionNode*> arguments;
-		Environment::Function* cachedFunction; // for caching function pointer, to avoid searching env every time
-		CallNode() : cachedFunction(nullptr) { }
+		CallNode() { }
 		~CallNode() { for (ExpressionNode* n : arguments) delete n; }
 		virtual ExecutionResult execute(Environment& env) override
 		{
-			// lookup and cache function pointer
-			if (!cachedFunction) cachedFunction = &env.getFunction(identifier, arguments.size()); 
+			Environment::Function& func = env.getFunction(identifier, arguments.size());
 			for (int i = 0; i < arguments.size(); i++) // push arguments
 			{
-				cachedFunction->environment->pushVariable(
-					cachedFunction->parameters[i], 
+				func.environment->pushVariable(
+					func.parameters[i], 
 					arguments[i]->execute(env).value);
 			}
-			ExecutionResult execution = ((AST::Node*)(cachedFunction->body))->execute(*(cachedFunction->environment));
-			clean(env);
+			ExecutionResult execution = ((AST::Node*)(func.body))->execute(*(func.environment));
+			clean(*func.environment);
 			return ExecutionResult(ExecutionResult::Type::Normal, execution.value);
 		}
 		void clean(Environment& env)
 		{
-			cachedFunction->environment->popVariables(arguments.size()); // pop arguments
+			env.popVariables(arguments.size()); // pop arguments
 		}
 	};
 

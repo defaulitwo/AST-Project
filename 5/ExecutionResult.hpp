@@ -14,7 +14,7 @@ public:
 	ExecutionResult(Type t = Type::Normal, long long v = 0) : type(t), value(v) { }
 };
 
-class Error : public ExecutionResult // also not currently used
+class Error : public ExecutionResult // also not currently used, currently using regular throw, try catch
 {
 	string message;
 	Error(const string& m) : message(m)

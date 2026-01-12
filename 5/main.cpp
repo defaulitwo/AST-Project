@@ -30,7 +30,7 @@ void execute(const string& input, Environment& env)
             cout << endl << "Program returned " << execution.value;
         }
     }
-    catch (runtime_error error)
+    catch (const runtime_error& error)
     {
         cerr << endl << "\033[31m" << error.what() << "\033[0m" << endl;
     }

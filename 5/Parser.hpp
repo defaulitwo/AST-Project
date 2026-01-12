@@ -48,10 +48,10 @@ private:
 		if (peek().type != type)
 		{
 			throw runtime_error(
-				"Parse error: Unexpected token, expected "
+				"Parse error: Unexpected token, expected \""
 				+ Token::toString(type)
-				+ ", found " + Token::toString(peek().type)
-				+ ", at line " + to_string(peek().lineNumber));
+				+ "\", found \"" + Token::toString(peek().type)
+				+ "\", at line " + to_string(peek().lineNumber));
 		}
 		else return eat();
 	}
@@ -71,10 +71,7 @@ private:
 			}
 			expect(Token::Type::RPAREN);
 		}
-		else
-		{
-			expect(Token::Type::RPAREN);
-		}
+		else expect(Token::Type::RPAREN);
 		returnNode->body = parseBlock();
 		return returnNode;
 	}
@@ -326,13 +323,12 @@ private:
 				returnNode = new AST::BinaryOpNode(
 					AST::BinaryOpNode::Mode::ASS,
 					returnNode,
-					parseAssignment() // (assignment is right associative)
-				);
+					parseAssignment()); // (assignment is right associative)
 		}
 		return returnNode;
 	}
 
-	AST::ExpressionNode* parseLogical() // logical AND, OR, NOT
+	AST::ExpressionNode* parseLogical() // logical AND, OR
 	{
 		AST::ExpressionNode* returnNode = parseBitwiseLogical();
 		while (peek().type == Token::Type::AND || peek().type == Token::Type::OR)
@@ -520,7 +516,7 @@ private:
 			break;
 		case Token::Type::STAR: // pointer dereference
 			expect(Token::Type::STAR);
-			returnNode = new AST::UnaryOpNode(AST::UnaryOpNode::Mode::DEREF, parseUnary());
+			returnNode = new AST::PointerDereferenceNode(parseUnary());
 			break;
 		default: 
 			returnNode = parsePrimary();
@@ -580,7 +576,7 @@ private:
 			}
 			else if (peek().type == Token::Type::LSQUAREBRACKET) // subscript
 			{
-				AST::ArrayAccessNode* newNode = new AST::ArrayAccessNode();
+				AST::SubscriptNode* newNode = new AST::SubscriptNode();
 				newNode->identifier = identifier;
 				expect(Token::Type::LSQUAREBRACKET);
 				newNode->indexExpression = parseExpression();
@@ -591,9 +587,9 @@ private:
 			break;
 		default: // invalid token found
 			throw runtime_error(
-				"Parse error: Unexpected token in parsePrimary(), expected an expression, found " 
+				"Parse error: Unexpected token in parsePrimary(), expected an expression, found \"" 
 				+ Token::toString(peek().type)
-				+ ", at line " + to_string(peek().lineNumber));
+				+ "\", at line " + to_string(peek().lineNumber));
 		}
 		return returnNode;
 	}
