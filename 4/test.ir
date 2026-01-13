@@ -1,6 +1,0 @@
-LOAD b
-LOAD c
-GT
-LOAD d
-ADD
-STORE a

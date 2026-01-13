@@ -53,7 +53,7 @@ public:
 	class StatementList : public StatementNode // statement list, AKA a scope { ... }
 	{
 	public:
-		int variableCount; // used for tracking number of variables on stack, to pop when exiting scope
+		long long variableCount; // used for tracking number of variables on stack, to pop when exiting scope
 		DynamicList<StatementNode*> statements;
 		StatementList() : variableCount(0) { }
 		virtual ~StatementList() { for (Node* n : statements) delete n; }

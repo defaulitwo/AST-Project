@@ -124,11 +124,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ExecutionResult.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="AST.cpp" />
-    <ClCompile Include="DynamicList.cpp" />
-    <ClCompile Include="Scope.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AST.hpp" />
@@ -137,9 +133,6 @@
     <ClInclude Include="Parser.hpp" />
     <ClInclude Include="Environment.hpp" />
     <ClInclude Include="Tokenizer.hpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

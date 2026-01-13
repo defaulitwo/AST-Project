@@ -113,7 +113,7 @@ public:
 			}
 		}
 		if (parent) return parent->getFunction(name, argCount); // not found in current environment, search in parent
-		throw runtime_error("Run error: Function signature \"" + name + "(..." + to_string(argCount) + " parameters...)\" is undefined.");
+		throw runtime_error("Run error: Function signature \"" + name + "(..." + to_string(argCount) + " parameters...)\" is undefined");
 	}
 };
 

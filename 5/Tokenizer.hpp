@@ -243,9 +243,11 @@ public:
 					pushToken(Token(Token::Type::CHAR, 0, "", inputString[i]));
 					i++;
 					if (inputString[i] == '\'') i++;
+					else throw runtime_error("Token error: expected \"'\", at line " + to_string(lineNumber));
 					continue;
-				default: // unknown symbol, skip it
-					i++; continue;
+				default: // unknown symbol, ignore it
+					throw runtime_error("Token error: Undefined symbol(s) found, at line " + to_string(lineNumber));
+					break;
 				}
 			}
 		}

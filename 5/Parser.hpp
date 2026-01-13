@@ -585,7 +585,7 @@ private:
 			}
 			else returnNode = new AST::IdentifierNode(identifier); // identifier
 			break;
-		default: // invalid token found
+		default: // invalid token
 			throw runtime_error(
 				"Parse error: Unexpected token in parsePrimary(), expected an expression, found \"" 
 				+ Token::toString(peek().type)

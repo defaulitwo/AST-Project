@@ -11,17 +11,17 @@ bool showTokens = false;
 
 void execute(const string& input, Environment& env)
 {
-    // tokenizing the input string, generating the token list
-    Tokenizer tokenizer(input);
-    if (showTokens)
-    {
-        cout << "Tokenization result:" << endl;
-        tokenizer.printTokensTo(cout);
-        cout << endl;
-    }
-    // parsing the token list, building AST
     try
     {
+        // tokenizing the input string, generating the token list
+        Tokenizer tokenizer(input);
+        if (showTokens)
+        {
+            cout << "Tokenization output:" << endl;
+            tokenizer.printTokensTo(cout);
+            cout << endl;
+        }
+        // parsing the token list, building AST
         Parser parser;
         AST tree = parser.Parse(tokenizer);
         ExecutionResult execution = tree.execute(env);
@@ -130,6 +130,8 @@ int main(int argc, char* argv[])
                 else if (line.compare("showtokens") == 0) // show tokenizer output
                 {
                     showTokens = !showTokens;
+                    if (showTokens) cout << endl << "Tokenizer output enabled" << endl;
+                    else cout << endl << "Tokenizer output disabled" << endl;
                     refresh = true;
                 }
                 else // push new line
