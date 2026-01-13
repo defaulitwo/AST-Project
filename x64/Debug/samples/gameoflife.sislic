@@ -1,0 +1,199 @@
+global s = 25;
+array global[s*s] world;
+array global[s*s] next;
+
+# index helper function
+func idx(x, y)
+{
+    return x + y*s;
+}
+
+# get cell state
+func getCell(x, y)
+{
+    if (x < 0) return 0;
+    if (y < 0) return 0;
+    if (x >= s) return 0;
+    if (y >= s) return 0;
+    return world[idx(x, y)];
+    printchar 't';
+}
+
+# get neighbor count
+func neighbors(x, y)
+{
+    var n;
+    n = 0;
+    n = n + getCell(x-1, y-1);
+    n = n + getCell(x,   y-1);
+    n = n + getCell(x+1, y-1);
+    n = n + getCell(x-1, y  );
+    n = n + getCell(x+1, y  );
+    n = n + getCell(x-1, y+1);
+    n = n + getCell(x,   y+1);
+    n = n + getCell(x+1, y+1);
+
+    return n;
+}
+
+# step to next generation
+func step()
+{
+    for (var y, y < s, ++y)
+    {
+        for (var x, x < s, ++x)
+        {
+            var alive;
+            var n;
+
+            alive = world[idx(x, y)];
+            n = neighbors(x, y);
+
+            if (alive)
+            {
+                if (n < 2) next[idx(x, y)] = 0;
+                else if (n > 3) next[idx(x, y)] = 0;
+                else next[idx(x, y)] = 1;
+            }
+            else
+            {
+                if (n == 3) next[idx(x, y)] = 1;
+                else next[idx(x, y)] = 0;
+            }
+        }
+    }
+
+    # copy next -> world
+    for (var i, i < s*s, ++i)
+    {
+        world[i] = next[i];
+    }
+}
+
+func draw()
+{
+    for (var y, y < s, ++y)
+    {
+        for (var x, x < s, ++x)
+        {
+            if (world[idx(x, y)])
+                repeat 2 printchar 219;
+            else
+                repeat 2 printchar ' ';
+        }
+        println;
+    }
+    println;
+}
+
+# random pattern
+func fillRandom()
+{
+    for (var i, i < s, ++i)
+	for (var j, j < s, ++j)
+		world[idx(i,j)] = {if random%2 1 else 0};
+}
+
+# glider
+func createGlider(x, y)
+{
+    world[idx(x+1,y+0)] = 1;
+    world[idx(x+2,y+1)] = 1;
+    world[idx(x+0,y+2)] = 1;
+    world[idx(x+1,y+2)] = 1;
+    world[idx(x+2,y+2)] = 1;
+}
+
+# spaceship
+func createSpaceship(x, y)
+{
+    world[idx(x+1,y  )] = 1;
+    world[idx(x+2,y  )] = 1;
+    world[idx(x+3,y  )] = 1;
+    world[idx(x+4,y  )] = 1;
+    world[idx(x  ,y+1)] = 1;
+    world[idx(x+4,y+1)] = 1;
+    world[idx(x+4,y+2)] = 1;
+    world[idx(x  ,y+3)] = 1;
+    world[idx(x+3,y+3)] = 1;
+}
+
+# pentomino
+func createPentomino(x, y)
+{
+    world[idx(x+1,y  )] = 1;
+    world[idx(x+1,y+1)] = 1;
+    world[idx(x+1,y+2)] = 1;
+    world[idx(x  ,y+1)] = 1;
+    world[idx(x+2,y  )] = 1;
+}
+
+# pulsar
+func createPulsar(x, y)
+{
+    # vertical arms
+    world[idx(x+2, y+0)] = 1; world[idx(x+3, y+0)] = 1; world[idx(x+4, y+0)] = 1;
+    world[idx(x+8, y+0)] = 1; world[idx(x+9, y+0)] = 1; world[idx(x+10, y+0)] = 1;
+
+    world[idx(x+2, y+5)] = 1; world[idx(x+3, y+5)] = 1; world[idx(x+4, y+5)] = 1;
+    world[idx(x+8, y+5)] = 1; world[idx(x+9, y+5)] = 1; world[idx(x+10, y+5)] = 1;
+
+    world[idx(x+2, y+7)] = 1; world[idx(x+3, y+7)] = 1; world[idx(x+4, y+7)] = 1;
+    world[idx(x+8, y+7)] = 1; world[idx(x+9, y+7)] = 1; world[idx(x+10, y+7)] = 1;
+
+    world[idx(x+2, y+12)] = 1; world[idx(x+3, y+12)] = 1; world[idx(x+4, y+12)] = 1;
+    world[idx(x+8, y+12)] = 1; world[idx(x+9, y+12)] = 1; world[idx(x+10, y+12)] = 1;
+
+    # horizontal arms
+    world[idx(x+0, y+2)] = 1; world[idx(x+0, y+3)] = 1; world[idx(x+0, y+4)] = 1;
+    world[idx(x+5, y+2)] = 1; world[idx(x+5, y+3)] = 1; world[idx(x+5, y+4)] = 1;
+    world[idx(x+7, y+2)] = 1; world[idx(x+7, y+3)] = 1; world[idx(x+7, y+4)] = 1;
+    world[idx(x+12, y+2)] = 1; world[idx(x+12, y+3)] = 1; world[idx(x+12, y+4)] = 1;
+
+    world[idx(x+0, y+8)] = 1; world[idx(x+0, y+9)] = 1; world[idx(x+0, y+10)] = 1;
+    world[idx(x+5, y+8)] = 1; world[idx(x+5, y+9)] = 1; world[idx(x+5, y+10)] = 1;
+    world[idx(x+7, y+8)] = 1; world[idx(x+7, y+9)] = 1; world[idx(x+7, y+10)] = 1;
+    world[idx(x+12, y+8)] = 1; world[idx(x+12, y+9)] = 1; world[idx(x+12, y+10)] = 1;
+}
+
+# acorn
+func createAcorn(x, y)
+{
+    world[idx(x+1, y+0)] = 1;
+    world[idx(x+3, y+1)] = 1;
+    world[idx(x+0, y+2)] = 1;
+    world[idx(x+1, y+2)] = 1;
+    world[idx(x+4, y+2)] = 1;
+    world[idx(x+5, y+2)] = 1;
+    world[idx(x+6, y+2)] = 1;
+}
+
+func start()
+{
+    var counter;
+    var refresh = true;
+    #createPentomino(9,9);
+    #createPentomino(14,14);
+    #createGlider(0,0);
+    #createSpaceship(0,6);
+    #createPulsar(2,2);
+    #createAcorn(13,13);
+    fillRandom();
+    while(true)
+    {
+	printchar 27; printchar 'c'; # ascii sequence for clearing terminal
+
+    	printchar 27; printchar '['; printchar '?';  # ascii sequence for
+    	printchar '2'; printchar '5'; printchar 'l'; # hiding the cursor
+
+        println counter;
+	draw();
+       	step();
+
+	if refresh && counter == 100 { fillRandom(); counter = 0; }
+	++counter;
+    }
+}
+
+start();
+run
