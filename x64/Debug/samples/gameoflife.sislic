@@ -181,17 +181,17 @@ func start()
     fillRandom();
     while(true)
     {
-	printchar 27; printchar 'c'; # ascii sequence for clearing terminal
+	    printchar 27; printchar 'c'; # ascii sequence for clearing terminal
 
     	printchar 27; printchar '['; printchar '?';  # ascii sequence for
     	printchar '2'; printchar '5'; printchar 'l'; # hiding the cursor
 
         println counter;
-	draw();
+	    draw();
        	step();
 
-	if refresh && counter == 100 { fillRandom(); counter = 0; }
-	++counter;
+	    if refresh && counter == 100 { fillRandom(); counter = 0; }
+	    ++counter;
     }
 }
 

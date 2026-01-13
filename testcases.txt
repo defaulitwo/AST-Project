@@ -1,0 +1,270 @@
+# NOTE: DONT FORGET COMMANDS
+
+# scope
+# automatic variables get destroyed
+var x = 10;
+println x;
+{
+    var x = 20;
+	println x;
+	{
+		var x = 30;
+		println x;
+	}
+       println x;
+}
+println x;
+run
+
+println x;  # should throw an error
+run
+
+
+# global variables persist
+global myGlobal = 150;
+println myGlobal;
+run
+
+println myGlobal;
+run
+
+
+# functions persist too
+func hiFunction()
+{
+    printchar 'H'; printchar 'i';
+}
+hiFunction();
+run
+
+hiFunction();
+run
+
+
+var x; var y; var z;
+x = y = z = 10; # multiple assignment
+
+if (x == y && y == z && z == 10) printchar 'Y';
+else printchar 'N';
+run
+
+
+# array
+array var[10] arr;
+for (var i = 1, i <= 10, ++i)
+    arr[i] = 10*i;
+
+for (var i = 1, i <= 10, ++i)
+{    
+    print arr[i]; printchar ' ';
+}
+run
+
+
+# while loop, if-else chain, and break
+while (true)
+{
+	printchar '>'; printchar ' ';
+	input grade = 999; 	    # input
+	if grade == 999 break;  # break
+
+	if grade >= 90 	# if-else chain
+    	printchar 'A';
+	else if grade >= 80
+    	printchar 'B';
+	else if grade >= 70
+    	printchar 'C';
+	else if grade >= 60
+    	printchar 'D';
+	else printchar 'F';
+	println;
+}
+println;  
+run
+
+
+# gradient of stars (triple nested for loop)
+for (var n = 1; n < 6; ++n)
+{
+	for (var j; j < 2; ++j)
+	{
+	        for (var i, i < 120, ++i)
+	       		printchar { if (i+j)%n == 0 '*' else ' ' }; # block expression
+	        println;
+	}
+}
+run
+
+
+# function declaration and call
+func add(x,y)
+{
+    return x+y;
+}
+var x = 10;
+var y = 20;
+println add(x,y);
+run
+
+
+# recursion
+func fib(n)
+{
+    if n <= 1 return n;
+    return fib(n-1) + fib(n-2);
+}
+# print 20 first fibonacci numbers
+for var i; i < 20; ++i { print fib(i); printchar ' '; }
+run
+
+
+# global inside functions acts like static keyword in C
+func count()
+{
+    global counter = 0; # initialized once
+    ++counter;
+    return counter;
+}
+repeat 10 { print count( ); printchar ' '; }
+run
+
+
+# nested functions
+func outer(a,b)
+{
+    func inner(x,y)
+    {
+        return 2*x + 4*y;
+    }
+    return inner(a,b);
+}
+println outer(10,20);
+run
+
+
+# pointers
+var x = 'Y';
+var ptr = &x;     # address-of
+printchar *ptr;
+run
+
+
+# pointers and swapping
+func swap(aPtr,bPtr)
+{
+        var temp = *aPtr;
+        *aPtr = *bPtr
+        *bPtr = temp;
+}
+var x = 100;
+var y = 50;
+swap(&x,&y);
+println x; println y;
+run
+
+
+# prime number check
+printchar '>'; printchar ' ';
+input n;
+var isPrime = true;
+if n < 2
+    isPrime = false;
+else {
+    for var i = 2, i * i <= n, ++i
+        if n % i == 0 {
+            isPrime = 0;
+            break;
+        }
+}
+if isPrime printchar 'Y';
+else printchar 'N';
+println;
+run
+
+
+### (demonstrate recall)
+
+
+# factorial using block expression
+printchar '>'; printchar ' ';
+input n = 0;
+var factorial = {
+    var result = 1;
+    for (var i = 1, i <= n, ++i)
+        result = result * i;
+    result; 	# block evaluates to result
+};
+print factorial; println;
+run
+
+
+# print hello world 10 times using repeat statement
+repeat 10 
+{
+    printchar 'H'; printchar 'e'; repeat 2 printchar 'l'; printchar 'o';
+    printchar ' ';
+    printchar 'W'; printchar 'o'; printchar 'r'; printchar 'l'; printchar 'd'; printchar '!';
+    println;
+}
+run
+
+
+# using a single variable as an array of 8 characters
+var x;
+x = 't';
+x = (x << 8) | 'e';
+x = (x << 8) | 's';
+x = (x << 8) | 't';
+x = (x << 8) | 't';
+x = (x << 8) | 'e';
+x = (x << 8) | 's';
+x = (x << 8) | 't';
+for var i = 7, i >= 0, --i
+    printchar x >> 8*i;
+println;
+run
+
+
+# 1000 random numbers
+repeat 1000 
+{
+       print random; printchar ' ';
+}
+run
+
+
+# -------------- ERROR HANDLING -------------- #
+
+
+println x  print y      # syntax error
+run
+
+
+printchar 'A;   # another syntax error
+run
+
+
+print 10/0;     # divide by zero
+run
+
+
+print 10%0;     # mod by zero
+run
+
+
+println x;      # undefined variable
+run
+
+
+println invalidFunction(a,b,c);     # undefined function
+run
+
+
+array var[-5] arr;     # invalid array size
+run
+
+
+var address = 0;
+print *address;     # out of bounds
+run
+
