@@ -268,3 +268,5 @@ var address = 0;
 print *address;     # out of bounds
 run
 
+
+# END
