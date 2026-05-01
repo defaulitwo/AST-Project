@@ -1,2 +1,2 @@
 # Data structures project (Abstract syntax tree)
-## A small language interpreter
+## An interpreter for a minimal, small C-like language 
